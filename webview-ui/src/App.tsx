@@ -3,7 +3,7 @@ import { useVsCodeMessage } from './hooks/useVsCodeMessage';
 import { ReportViewer } from './components/ReportViewer';
 import { ReportEditor } from './components/ReportEditor';
 import { ActionPanel } from './components/ActionPanel';
-import type { ExtToWebviewMessage } from '../../src/webviewProtocol';
+import type { ExtToWebviewMessage } from './types/webviewProtocol';
 
 interface AppState {
   markdown: string;
@@ -91,9 +91,9 @@ export function App() {
         {state.issueKey && (
           <span className="issue-badge">{state.issueKey}</span>
         )}
-        {state.metadata.provider && (
+        {typeof state.metadata.provider === 'string' && (
           <span className="meta-info">
-            {String(state.metadata.provider)} · {String(state.metadata.model ?? '')}
+            {state.metadata.provider} · {String(state.metadata.model ?? '')}
           </span>
         )}
       </div>

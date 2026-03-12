@@ -22,7 +22,6 @@ export class ReportPanel {
 
   /** 현재 표시 중인 리포트 마크다운 (에디터에서 수정 시 업데이트) */
   private _currentMarkdown: string = '';
-  private _currentIssueKey: string = '';
 
   /** 외부 핸들러 — 액션 메시지를 처리할 콜백 */
   private _onAction?: (msg: WebviewToExtMessage) => Promise<void>;
@@ -102,7 +101,6 @@ export class ReportPanel {
     };
   }): void {
     this._currentMarkdown = data.markdown;
-    this._currentIssueKey = data.issueKey;
 
     this._postMessageToWebview({
       type: 'reportData',

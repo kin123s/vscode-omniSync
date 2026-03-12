@@ -5,8 +5,6 @@
  * 싱글톤으로 캐시한다.
  */
 
-import type { WebviewApi } from '@vscode/webview-ui-toolkit';
-
 // VS Code Webview에서 제공하는 API 타입
 interface VsCodeApi {
   postMessage(message: unknown): void;

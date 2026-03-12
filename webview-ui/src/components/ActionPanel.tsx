@@ -1,4 +1,4 @@
-import type { WebviewToExtMessage } from '../../../src/webviewProtocol';
+import type { WebviewToExtMessage } from '../types/webviewProtocol';
 
 interface ActionPanelProps {
   issueKey: string;

@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import type { ExtToWebviewMessage, WebviewToExtMessage } from '../../src/webviewProtocol';
+import type { ExtToWebviewMessage, WebviewToExtMessage } from '../types/webviewProtocol';
 import { getVsCodeApi } from '../vscode';
 
 /**
