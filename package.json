@@ -1,0 +1,238 @@
+{
+  "name": "vscode-omnisync",
+  "displayName": "OmniSync",
+  "description": "Multi-Platform AI Project Assistant for VS Code (Jira, Linear, GitHub Issues, etc.)",
+  "publisher": "genians",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/genians/vscode-omniSync.git"
+  },
+  "icon": "resources/icon.png",
+  "keywords": [
+    "jira",
+    "linear",
+    "github",
+    "copilot",
+    "project",
+    "agent",
+    "ai",
+    "orchestrator",
+    "omnisync"
+  ],
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "universal-agent",
+          "title": "Universal Agent",
+          "icon": "resources/agent-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "universal-agent": [
+        {
+          "id": "universalAgent.issueExplorer",
+          "name": "%view.issueExplorer.name%"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "universal-agent.login",
+        "title": "%command.login.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.logout",
+        "title": "%command.logout.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.fetchIssue",
+        "title": "%command.fetchIssue.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.generatePlan",
+        "title": "%command.generatePlan.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.startTracking",
+        "title": "%command.startTracking.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.stopTracking",
+        "title": "%command.finishReport.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.toggleTracking",
+        "title": "%command.toggleTracking.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.finishAndReport",
+        "title": "%command.finishReport.title%",
+        "category": "%extension.category%"
+      },
+      {
+        "command": "universal-agent.refreshTree",
+        "title": "Universal Agent: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "universal-agent.openInBrowser",
+        "title": "Universal Agent: Open in Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "universal-agent.searchIssues",
+        "title": "%command.searchIssues.title%",
+        "icon": "$(search)"
+      },
+      {
+        "command": "universal-agent.selectPlatform",
+        "title": "Universal Agent: Select Platform",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "universal-agent.refreshTree",
+          "when": "view == universalAgent.issueExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "universal-agent.searchIssues",
+          "when": "view == universalAgent.issueExplorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "universal-agent.openInBrowser",
+          "when": "viewItem == agentIssue",
+          "group": "inline"
+        },
+        {
+          "command": "universal-agent.startTracking",
+          "when": "viewItem == agentIssue"
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "universal-agent.assistant",
+        "name": "agent",
+        "fullName": "Universal Agent",
+        "description": "Multi-platform issue tracking and AI task assistant",
+        "isSticky": false
+      }
+    ],
+    "configuration": {
+      "title": "OmniSync",
+      "properties": {
+        "universalAgent.devMode": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "개발 모드: `true`로 설정 시 라이선스 검증을 건너뛰고 모든 기능을 활성화합니다. **프로덕션에서는 반드시 `false`로 유지하세요.**",
+          "order": -1
+        },
+        "universalAgent.trackerPlatform": {
+          "type": "string",
+          "enum": ["jira-cloud", "jira-server", "github", "linear"],
+          "enumDescriptions": [
+            "Jira Cloud (OAuth 2.0)",
+            "Jira Server / Data Center (API Token)",
+            "GitHub Issues (PAT)",
+            "Linear (API Key)"
+          ],
+          "default": "jira-cloud",
+          "markdownDescription": "연결할 이슈 트래커 플랫폼을 선택합니다.",
+          "order": 0
+        },
+        "universalAgent.licenseServerUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "라이선스 서버 URL (예: https://license.yourcompany.com)",
+          "order": 1
+        },
+        "universalAgent.trackerDomain": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "트래커 인스턴스 도메인 (예: `your-company.atlassian.net`, `github.com`). **Jira Cloud는 OAuth 로그인 후 자동 입력됩니다.**",
+          "order": 2
+        },
+        "universalAgent.email": {
+          "type": "string",
+          "default": "",
+          "description": "트래커 로그인에 사용하는 이메일 주소",
+          "order": 3
+        },
+        "universalAgent.apiToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "API 토큰 또는 Personal Access Token (PAT)",
+          "order": 4
+        },
+        "universalAgent.llmApiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "(선택) VS Code에 내장된 AI(Copilot, Antigravity 등)가 없는 경우에만 OpenAI API 키를 입력하세요. **내장 AI가 있으면 이 설정은 비워 두세요.**",
+          "order": 5
+        },
+        "universalAgent.allowSelfSignedCert": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "⚠️ **Jira Server/DC 전용**: 자체 서명(self-signed) SSL 인증서를 사용하는 환경에서 HTTPS 연결을 허용합니다. **보안 위험이 있으므로, 신뢰할 수 있는 사내 네트워크에서만 활성화하세요.**",
+          "order": 6
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "quality": "pnpm run check-types && pnpm run lint",
+    "quality:fix": "eslint src --fix",
+    "pretest": "pnpm run compile",
+    "package:vsix": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.100.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.24.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.3"
+  }
+}

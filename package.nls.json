@@ -1,0 +1,12 @@
+{
+  "command.login.title": "Universal Agent: Authenticate",
+  "command.logout.title": "Universal Agent: Sign Out",
+  "command.fetchIssue.title": "Universal Agent: Fetch Issue",
+  "command.generatePlan.title": "Universal Agent: Generate Work Plan",
+  "command.startTracking.title": "Universal Agent: Start Tracking",
+  "command.finishReport.title": "Universal Agent: Finish Work & Report",
+  "command.toggleTracking.title": "Universal Agent: Toggle Tracking",
+  "command.searchIssues.title": "Universal Agent: Search Issues",
+  "extension.category": "Universal Agent",
+  "view.issueExplorer.name": "Issue Explorer"
+}

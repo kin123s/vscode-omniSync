@@ -1,0 +1,12 @@
+{
+  "command.login.title": "Universal Agent: 인증",
+  "command.logout.title": "Universal Agent: 로그아웃",
+  "command.fetchIssue.title": "Universal Agent: 이슈 조회",
+  "command.generatePlan.title": "Universal Agent: 작업 계획서 생성",
+  "command.startTracking.title": "Universal Agent: 추적 시작",
+  "command.finishReport.title": "Universal Agent: 작업 종료 & 리포트",
+  "command.toggleTracking.title": "Universal Agent: 추적 토글",
+  "command.searchIssues.title": "Universal Agent: 이슈 검색",
+  "extension.category": "유니버설 에이전트",
+  "view.issueExplorer.name": "이슈 탐색기"
+}
