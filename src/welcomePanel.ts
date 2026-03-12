@@ -295,17 +295,17 @@ export class WelcomePanel {
   <!-- Step 1: 플랫폼 선택 -->
   <div id="platform-select" class="form-section ${!showForm ? 'active' : ''}">
     <div class="cards">
-      <div class="card ${current === 'jira-cloud' ? 'selected' : ''}" role="button" tabindex="0" onclick="selectPlatform('jira-cloud')" onkeydown="if(event.key==='Enter') selectPlatform('jira-cloud')">
+      <div class="card ${current === 'jira-cloud' ? 'selected' : ''}" role="button" tabindex="0" data-platform="jira-cloud">
         <span class="card-icon">🌐</span>
         <div class="card-title">Jira Cloud</div>
         <div class="card-desc">OAuth 2.0 인증</div>
       </div>
-      <div class="card ${current === 'jira-server' ? 'selected' : ''}" role="button" tabindex="0" onclick="selectPlatform('jira-server')" onkeydown="if(event.key==='Enter') selectPlatform('jira-server')">
+      <div class="card ${current === 'jira-server' ? 'selected' : ''}" role="button" tabindex="0" data-platform="jira-server">
         <span class="card-icon">🖥️</span>
         <div class="card-title">Jira Server / DC</div>
         <div class="card-desc">API Token 인증</div>
       </div>
-      <div class="card ${current === 'github' ? 'selected' : ''}" role="button" tabindex="0" onclick="selectPlatform('github')" onkeydown="if(event.key==='Enter') selectPlatform('github')">
+      <div class="card ${current === 'github' ? 'selected' : ''}" role="button" tabindex="0" data-platform="github">
         <span class="card-icon">🐙</span>
         <div class="card-title">GitHub</div>
         <div class="card-desc">Personal Access Token</div>
@@ -335,8 +335,8 @@ export class WelcomePanel {
       <div class="hint">Jira → 프로필 → 보안 → API 토큰 생성</div>
     </div>
     <div class="actions">
-      <button class="btn-secondary" onclick="goBack()">← 뒤로</button>
-      <button class="btn-primary" onclick="submitServer()">연결</button>
+      <button class="btn-secondary" id="back-jira-server">← 뒤로</button>
+      <button class="btn-primary" id="submit-jira-server">연결</button>
     </div>
   </div>
 
@@ -348,8 +348,8 @@ export class WelcomePanel {
       <p style="color: var(--muted); font-size: 12px; margin-bottom: 20px;">브라우저가 열리며 Atlassian OAuth 인증을 진행합니다.</p>
     </div>
     <div class="actions">
-      <button class="btn-secondary" onclick="goBack()">← 뒤로</button>
-      <button class="btn-primary" onclick="oauthLogin()">🔑 Atlassian으로 로그인</button>
+      <button class="btn-secondary" id="back-jira-cloud">← 뒤로</button>
+      <button class="btn-primary" id="submit-jira-cloud">🔑 Atlassian으로 로그인</button>
     </div>
   </div>
 
@@ -366,8 +366,8 @@ export class WelcomePanel {
       <div class="hint">Settings → Developer settings → Personal access tokens</div>
     </div>
     <div class="actions">
-      <button class="btn-secondary" onclick="goBack()">← 뒤로</button>
-      <button class="btn-primary" onclick="submitGitHub()">연결</button>
+      <button class="btn-secondary" id="back-github">← 뒤로</button>
+      <button class="btn-primary" id="submit-github">연결</button>
     </div>
   </div>
 </div>
@@ -375,37 +375,64 @@ export class WelcomePanel {
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
 
-  function selectPlatform(platform) {
-    vscode.postMessage({ command: 'selectPlatform', platform });
-  }
+  // ── 플랫폼 카드 클릭 (data-platform 속성 기반) ──
+  document.querySelectorAll('.card[data-platform]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var platform = card.getAttribute('data-platform');
+      if (platform) {
+        vscode.postMessage({ command: 'selectPlatform', platform: platform });
+      }
+    });
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { card.click(); }
+    });
+  });
 
-  function goBack() {
-    vscode.postMessage({ command: 'back' });
-  }
-
-  function submitServer() {
-    const domain = document.getElementById('domain').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const apiToken = document.getElementById('apiToken').value.trim();
-    if (!domain || !email || !apiToken) {
-      alert('모든 필드를 입력해주세요.');
-      return;
+  // ── 뒤로 버튼 ──
+  ['back-jira-server', 'back-jira-cloud', 'back-github'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', function() {
+        vscode.postMessage({ command: 'back' });
+      });
     }
-    vscode.postMessage({ command: 'submitCredentials', domain, email, apiToken });
+  });
+
+  // ── Jira Server 연결 ──
+  var submitJiraServer = document.getElementById('submit-jira-server');
+  if (submitJiraServer) {
+    submitJiraServer.addEventListener('click', function() {
+      var domain = document.getElementById('domain').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var apiToken = document.getElementById('apiToken').value.trim();
+      if (!domain || !email || !apiToken) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+      }
+      vscode.postMessage({ command: 'submitCredentials', domain: domain, email: email, apiToken: apiToken });
+    });
   }
 
-  function submitGitHub() {
-    const domain = document.getElementById('gh-domain').value.trim();
-    const apiToken = document.getElementById('gh-token').value.trim();
-    if (!domain || !apiToken) {
-      alert('모든 필드를 입력해주세요.');
-      return;
-    }
-    vscode.postMessage({ command: 'submitCredentials', domain, apiToken, email: '' });
+  // ── Jira Cloud OAuth 로그인 ──
+  var submitJiraCloud = document.getElementById('submit-jira-cloud');
+  if (submitJiraCloud) {
+    submitJiraCloud.addEventListener('click', function() {
+      vscode.postMessage({ command: 'oauthLogin' });
+    });
   }
 
-  function oauthLogin() {
-    vscode.postMessage({ command: 'oauthLogin' });
+  // ── GitHub 연결 ──
+  var submitGitHub = document.getElementById('submit-github');
+  if (submitGitHub) {
+    submitGitHub.addEventListener('click', function() {
+      var domain = document.getElementById('gh-domain').value.trim();
+      var apiToken = document.getElementById('gh-token').value.trim();
+      if (!domain || !apiToken) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+      }
+      vscode.postMessage({ command: 'submitCredentials', domain: domain, apiToken: apiToken, email: '' });
+    });
   }
 </script>
 </body>
