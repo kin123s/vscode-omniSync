@@ -43,10 +43,13 @@
 
 ## ✨ 핵심 기능
 
+> **현재 지원 트래커**: Jira Cloud / Server (REST API v2) — GitHub Issues, Linear 어댑터는 인터페이스 정의 완료 후 구현 예정
+
 | 기능 | 설명 | 상태 |
 |------|------|:----:|
-| **다중 트래커 연동** | Jira Cloud/Server, GitHub Issues, Linear 등을 통합 TreeView로 탐색 | ✅ 구현됨 |
-| **OAuth 2.0 / API Token 인증** | Jira Cloud OAuth, Server PAT, GitHub PAT, Linear API Key 지원 | ✅ 구현됨 |
+| **Jira 트래커 연동** | Jira Cloud/Server (REST API v2) 통합 TreeView로 탐색 | ✅ 구현됨 |
+| **다중 트래커 아키텍처** | `TrackerAdapter` 인터페이스 기반 — GitHub Issues, Linear 등 확장 가능 | 📐 설계됨 |
+| **OAuth 2.0 / API Token 인증** | Jira Cloud OAuth, Server PAT 지원 (GitHub PAT, Linear API Key는 예정) | ✅ 구현됨 |
 | **이슈 탐색기 (TreeView)** | Activity Bar에서 이슈를 계층적으로 탐색 · 검색 · 브라우저 열기 | ✅ 구현됨 |
 | **작업 시간 추적 (Time Tracker)** | 이슈 단위 작업 시간 자동 추적 및 Git Diff 수집 | ✅ 구현됨 |
 | **AI 채팅 참여자** | VS Code Chat에서 `@agent` 명령으로 이슈 컨텍스트 기반 AI 어시스턴트 활용 | ✅ 구현됨 |
@@ -94,7 +97,7 @@ graph TB
 
 ### 핵심 설계 패턴
 
-- **어댑터 패턴 (Adapter Pattern)** — `ITrackerAdapter` 인터페이스로 플랫폼 종속성을 완전 차단. 신규 플랫폼 추가 시 어댑터만 구현
+- **어댑터 패턴 (Adapter Pattern)** — `TrackerAdapter` 인터페이스로 플랫폼 종속성을 완전 차단. 현재 `JiraTrackerAdapter` (REST API v2) 구현 완료, 신규 플랫폼은 어댑터만 추가하면 확장 가능
 - **비간섭 수집 (Agnostic Hooking)** — 작업 *과정*이 아닌 *결과물*만 수집 (Git Diff, 테스트 로그)
 - **5단계 오케스트레이션 파이프라인** — `트리거 → PayloadBuilder → Reporter(LLM) → ReportReviewPanel(프리뷰) → ExportManager(라우팅)`
 
@@ -227,8 +230,8 @@ pnpm run package:vsix
 
 ### Phase 2 — 핵심 익스텐션 기능 `✅ 완료`
 
-- [x] `ITrackerAdapter` 어댑터 인터페이스 정의 및 `JiraTrackerAdapter` 구현
-- [x] OAuth 2.0 (Jira Cloud) / API Token (Server, GitHub, Linear) 인증 플로우
+- [x] `TrackerAdapter` 어댑터 인터페이스 정의 및 `JiraTrackerAdapter` (REST API v2) 구현
+- [x] OAuth 2.0 (Jira Cloud) / API Token (Jira Server) 인증 플로우
 - [x] 이슈 탐색기 TreeView (Activity Bar 통합)
 - [x] 작업 시간 추적 (Start/Stop Tracking + Git Diff 수집)
 - [x] `@agent` 채팅 참여자 (VS Code Chat 통합)
