@@ -51,6 +51,17 @@ export async function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(treeView, connectionManager);
 
+    // ── 미인증 상태에서도 동작해야 하는 커맨드를 여기서 등록 ──
+    context.subscriptions.push(
+        vscode.commands.registerCommand('universal-agent.refreshTree', () => {
+            connectionManager.checkConnection();
+            treeProvider.refresh();
+        }),
+        vscode.commands.registerCommand('universal-agent.searchIssues', () => {
+            vscode.commands.executeCommand('universal-agent.searchJql');
+        }),
+    );
+
     // 플랫폼 선택 + 로그인 패널
     const openWelcome = () => {
         WelcomePanel.createOrShow(context, () => {

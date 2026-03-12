@@ -30,8 +30,8 @@ type MessageKey =
 
 const MESSAGES: Record<string, Record<MessageKey, string>> = {
     en: {
-        'tree.status.loggedIn': '$(check) Connected',
-        'tree.status.loggedOut': '$(warning) Not Connected',
+        'tree.status.loggedIn': '✅ Connected',
+        'tree.status.loggedOut': '⚠️ Not Connected',
         'tree.myIssues': '📋 My Issues (Assigned)',
         'tree.myFilters': '⭐ My Filters',
         'tree.querySearch': '🔍 Search Issues',
@@ -48,8 +48,8 @@ const MESSAGES: Record<string, Record<MessageKey, string>> = {
         'tracking.status.inactive': '⚫ Not Tracking',
     },
     ko: {
-        'tree.status.loggedIn': '$(check) 연결됨',
-        'tree.status.loggedOut': '$(warning) 연결 안 됨',
+        'tree.status.loggedIn': '✅ 연결됨',
+        'tree.status.loggedOut': '⚠️ 연결 안 됨',
         'tree.myIssues': '📋 내 이슈 (담당)',
         'tree.myFilters': '⭐ 내 필터',
         'tree.querySearch': '🔍 이슈 검색',

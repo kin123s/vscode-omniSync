@@ -65,3 +65,12 @@ vscode-omniSync/
 ## 7. 특화 에이전트 연계
 
 - 인프라, 보안, 프론트엔드 검증 시 루트 `.ai/roles/*.md` 참조
+
+## 8. 버전 및 릴리스 관리
+
+- **버전 체계**: `0.MINOR.PATCH` (Semantic Versioning)
+  - `PATCH` +1: 버그 수정, UI 수정, 리팩토링 등 **모든 코드 변경 시**
+  - `MINOR` +1: 신규 기능 추가 시
+  - `MAJOR` (1.x.x): 공개 릴리스 이후 breaking change 시
+- **변경 사항이 있을 때마다 반드시 `package.json`의 PATCH 버전을 1씩 올려야 함**
+- **빌드는 반드시 Docker 컨테이너에서 수행** → 자세한 절차는 `.ai/workflows/build.md` 참조
