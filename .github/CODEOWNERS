@@ -1,0 +1,67 @@
+# ==============================================================================
+# CODEOWNERS — vscode-omniSync
+# ==============================================================================
+# GitHub CODEOWNERS 파일: PR 생성 시 자동으로 리뷰어를 할당합니다.
+# 참고: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# 패턴 매칭 규칙:
+#   - 마지막에 매칭된 규칙이 우선 적용됩니다.
+#   - '*' 는 모든 파일을 의미합니다.
+# ==============================================================================
+
+# ──────────────────────────────────────────────
+# 🔑 Global Owner — 모든 파일의 기본 소유자
+# ──────────────────────────────────────────────
+*                                   @kin123s
+
+# ──────────────────────────────────────────────
+# 📦 Extension Core (진입점, 설정, 빌드)
+# ──────────────────────────────────────────────
+/src/extension.ts                   @kin123s
+/src/config.ts                      @kin123s
+/package.json                       @kin123s
+/esbuild.js                         @kin123s
+/tsconfig.json                      @kin123s
+
+# ──────────────────────────────────────────────
+# 🔌 Adapters (트래커 연동 어댑터)
+# ──────────────────────────────────────────────
+/src/adapters/                      @kin123s
+
+# ──────────────────────────────────────────────
+# 🤖 AI / Orchestration (파이프라인)
+# ──────────────────────────────────────────────
+/src/orchestrator/                  @kin123s
+/src/reporter.ts                    @kin123s
+/src/planner.ts                     @kin123s
+/src/llmService.ts                  @kin123s
+/src/chatParticipant.ts             @kin123s
+
+# ──────────────────────────────────────────────
+# 🔐 인증 / 라이선스
+# ──────────────────────────────────────────────
+/src/oauthManager.ts                @kin123s
+/src/oauthCallbackServer.ts         @kin123s
+/src/licenseManager.ts              @kin123s
+/src/licenseClient.ts               @kin123s
+
+# ──────────────────────────────────────────────
+# 🎨 Webview UI (React SPA)
+# ──────────────────────────────────────────────
+/webview-ui/                        @kin123s
+/src/ReportPanel.ts                 @kin123s
+/src/webviewProtocol.ts             @kin123s
+
+# ──────────────────────────────────────────────
+# 🌐 i18n / UI
+# ──────────────────────────────────────────────
+/src/i18n.ts                        @kin123s
+/src/treeView.ts                    @kin123s
+/src/welcomePanel.ts                @kin123s
+
+# ──────────────────────────────────────────────
+# 📝 문서 / CI
+# ──────────────────────────────────────────────
+/README.md                          @kin123s
+/LICENSE                            @kin123s
+/.github/                           @kin123s
