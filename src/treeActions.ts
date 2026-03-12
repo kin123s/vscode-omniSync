@@ -16,17 +16,11 @@ import { ConnectionManager } from './connectionManager';
  */
 export function registerTreeActions(
     treeProvider: JiraTreeDataProvider,
-    connectionManager: ConnectionManager,
+    _connectionManager: ConnectionManager,
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
 
-    // ── 새로고침 ──
-    disposables.push(
-        vscode.commands.registerCommand('universal-agent.refreshTree', () => {
-            connectionManager.checkConnection();
-            treeProvider.refresh();
-        }),
-    );
+    // 참고: refreshTree, searchIssues는 activate()에서 이미 등록됨
 
     // ── 브라우저에서 열기 ──
     disposables.push(

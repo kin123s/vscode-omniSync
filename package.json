@@ -2,11 +2,11 @@
   "name": "vscode-omnisync",
   "displayName": "OmniSync",
   "description": "Multi-Platform AI Project Assistant for VS Code (Jira, Linear, GitHub Issues, etc.)",
-  "publisher": "genians",
-  "version": "0.1.0",
+  "publisher": "dev-kin123s",
+  "version": "0.1.3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/genians/vscode-omniSync.git"
+    "url": "https://github.com/kin123s/vscode-omniSync.git"
   },
   "icon": "resources/icon.png",
   "keywords": [

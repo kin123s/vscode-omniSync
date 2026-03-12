@@ -15,7 +15,7 @@ export class WelcomePanel {
 
     private constructor(
         _context: vscode.ExtensionContext,
-        private readonly _onConnect: () => void,
+        private _onConnect: () => void,
     ) {
         this._panel = vscode.window.createWebviewPanel(
             'universalAgent.welcome',
@@ -40,10 +40,12 @@ export class WelcomePanel {
         this._render();
     }
 
-    /** 패널 열기 (이미 열려 있으면 포커스) */
+    /** 패널 열기 (이미 열려 있으면 포커스 + 재렌더링) */
     static createOrShow(context: vscode.ExtensionContext, onConnect: () => void): void {
         if (WelcomePanel._instance) {
+            WelcomePanel._instance._onConnect = onConnect;
             WelcomePanel._instance._panel.reveal(vscode.ViewColumn.One);
+            WelcomePanel._instance._render(); // 항상 최신 상태로 재렌더링
             return;
         }
         WelcomePanel._instance = new WelcomePanel(context, onConnect);
