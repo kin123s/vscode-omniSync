@@ -39,7 +39,6 @@ let terminalListener: TerminalListener;
 let exportManager: ExportManager;
 let payloadBuilder: PayloadBuilder;
 let gitTrigger: GitTrigger;
-let changeClassifier: ChangeClassifier;
 let initialized = false;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -224,7 +223,6 @@ function initializeFullFeatures(context: vscode.ExtensionContext): void {
     exportManager = new ExportManager();
 
     // ── Phase 5: Work Session extension modules ──
-    changeClassifier = new ChangeClassifier();
     gitTrigger = new GitTrigger(memoryManager);
     gitTrigger.register();
     context.subscriptions.push(gitTrigger);
