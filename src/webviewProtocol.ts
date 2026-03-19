@@ -1,12 +1,12 @@
-/**
- * OmniSync — Extension Host ↔ Webview 양방향 메시지 프로토콜 타입 정의.
+﻿/**
+ * Orx ??Extension Host ??Webview ?묐갑??硫붿떆吏 ?꾨줈?좎퐳 ????뺤쓽.
  *
- * 양쪽에서 import하여 타입 안전 메시지 패싱을 보장한다.
- * - Extension Host: src/webviewProtocol.ts 에서 re-export
- * - Webview React:  webview-ui/src/ 에서 직접 import
+ * ?묒そ?먯꽌 import?섏뿬 ????덉쟾 硫붿떆吏 ?⑥떛??蹂댁옣?쒕떎.
+ * - Extension Host: src/webviewProtocol.ts ?먯꽌 re-export
+ * - Webview React:  webview-ui/src/ ?먯꽌 吏곸젒 import
  */
 
-// ─── Extension Host → Webview ───
+// ??? Extension Host ??Webview ???
 
 export interface ReportDataMessage {
   type: 'reportData';
@@ -43,7 +43,7 @@ export type ExtToWebviewMessage =
   | UpdateStatusMessage
   | PlatformInfoMessage;
 
-// ─── Webview → Extension Host ───
+// ??? Webview ??Extension Host ???
 
 export interface SendToTrackerAction {
   type: 'action:sendToTracker';

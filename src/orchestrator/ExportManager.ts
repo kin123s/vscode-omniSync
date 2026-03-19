@@ -1,73 +1,73 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import type { TrackerAdapter } from '../adapters/TrackerAdapter';
 
 export class ExportManager {
   /**
-   * 생성된 페이로드(마크다운)를 시스템 클립보드에 복사합니다.
-   * 이렇게 하면 사용자가 Cursor, ChatGPT, Claude 등에 즉시 붙여넣을 수 있습니다.
+   * ?앹꽦???섏씠濡쒕뱶(留덊겕?ㅼ슫)瑜??쒖뒪???대┰蹂대뱶??蹂듭궗?⑸땲??
+   * ?대젃寃??섎㈃ ?ъ슜?먭? Cursor, ChatGPT, Claude ?깆뿉 利됱떆 遺숈뿬?ｌ쓣 ???덉뒿?덈떎.
    */
   public async exportToClipboard(payload: string): Promise<boolean> {
     try {
       await vscode.env.clipboard.writeText(payload);
-      vscode.window.showInformationMessage('📋 리포트가 클립보드에 복사되었습니다.');
+      vscode.window.showInformationMessage('?뱥 由ы룷?멸? ?대┰蹂대뱶??蹂듭궗?섏뿀?듬땲??');
       return true;
     } catch (error) {
-      console.error('클립보드 복사 실패:', error);
-      vscode.window.showErrorMessage('클립보드 복사에 실패했습니다.');
+      console.error('?대┰蹂대뱶 蹂듭궗 ?ㅽ뙣:', error);
+      vscode.window.showErrorMessage('?대┰蹂대뱶 蹂듭궗???ㅽ뙣?덉뒿?덈떎.');
       return false;
     }
   }
 
   /**
-   * 리포트를 로컬 파일로 Append 저장합니다.
-   * 경로: {workspaceRoot}/.omnisync/reports/{issueKey}.md
+   * 由ы룷?몃? 濡쒖뺄 ?뚯씪濡?Append ??ν빀?덈떎.
+   * 寃쎈줈: {workspaceRoot}/.orx/reports/{issueKey}.md
    *
-   * 같은 이슈 키의 파일이 이미 있으면 구분선과 함께 append.
+   * 媛숈? ?댁뒋 ?ㅼ쓽 ?뚯씪???대? ?덉쑝硫?援щ텇?좉낵 ?④퍡 append.
    */
   public async exportToLocalFile(issueKey: string, markdown: string): Promise<boolean> {
     try {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
-        vscode.window.showWarningMessage('열린 워크스페이스가 없습니다.');
+        vscode.window.showWarningMessage('?대┛ ?뚰겕?ㅽ럹?댁뒪媛 ?놁뒿?덈떎.');
         return false;
       }
 
-      const reportsDir = path.join(workspaceFolder.uri.fsPath, '.omnisync', 'reports');
+      const reportsDir = path.join(workspaceFolder.uri.fsPath, '.orx', 'reports');
       if (!fs.existsSync(reportsDir)) {
         fs.mkdirSync(reportsDir, { recursive: true });
       }
 
       const filePath = path.join(reportsDir, `${issueKey}.md`);
       const timestamp = new Date().toISOString();
-      const separator = `\n\n---\n\n> 📝 Updated: ${timestamp}\n\n`;
+      const separator = `\n\n---\n\n> ?뱷 Updated: ${timestamp}\n\n`;
 
       if (fs.existsSync(filePath)) {
-        // Append 모드
+        // Append 紐⑤뱶
         fs.appendFileSync(filePath, separator + markdown, 'utf-8');
       } else {
-        // 신규 생성
-        const header = `# ${issueKey} — 작업 리포트\n\n> 🕐 Created: ${timestamp}\n\n`;
+        // ?좉퇋 ?앹꽦
+        const header = `# ${issueKey} ???묒뾽 由ы룷??n\n> ?븧 Created: ${timestamp}\n\n`;
         fs.writeFileSync(filePath, header + markdown, 'utf-8');
       }
 
-      vscode.window.showInformationMessage(`💾 ${issueKey} 리포트 저장 완료 → .omnisync/reports/${issueKey}.md`);
+      vscode.window.showInformationMessage(`?뮶 ${issueKey} 由ы룷??????꾨즺 ??.orx/reports/${issueKey}.md`);
 
-      // 저장된 파일 열기
+      // ??λ맂 ?뚯씪 ?닿린
       const doc = await vscode.workspace.openTextDocument(filePath);
       await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
 
       return true;
     } catch (error) {
-      console.error('로컬 파일 저장 실패:', error);
-      vscode.window.showErrorMessage(`로컬 파일 저장 실패: ${error}`);
+      console.error('濡쒖뺄 ?뚯씪 ????ㅽ뙣:', error);
+      vscode.window.showErrorMessage(`濡쒖뺄 ?뚯씪 ????ㅽ뙣: ${error}`);
       return false;
     }
   }
 
   /**
-   * 트래커(Jira, GitHub 등)에 리포트를 코멘트로 전송합니다.
+   * ?몃옒而?Jira, GitHub ????由ы룷?몃? 肄붾찘?몃줈 ?꾩넚?⑸땲??
    */
   public async exportToTracker(
     adapter: TrackerAdapter,
@@ -77,28 +77,28 @@ export class ExportManager {
     try {
       const result = await adapter.updateIssue(issueKey, markdown);
       if (result) {
-        vscode.window.showInformationMessage(`🚀 ${issueKey}에 리포트가 등록되었습니다.`);
+        vscode.window.showInformationMessage(`?? ${issueKey}??由ы룷?멸? ?깅줉?섏뿀?듬땲??`);
       } else {
-        vscode.window.showWarningMessage(`${issueKey} 리포트 등록에 실패했습니다.`);
+        vscode.window.showWarningMessage(`${issueKey} 由ы룷???깅줉???ㅽ뙣?덉뒿?덈떎.`);
       }
       return result;
     } catch (error) {
-      console.error('트래커 전송 실패:', error);
-      vscode.window.showErrorMessage(`트래커 전송 실패: ${error}`);
+      console.error('?몃옒而??꾩넚 ?ㅽ뙣:', error);
+      vscode.window.showErrorMessage(`?몃옒而??꾩넚 ?ㅽ뙣: ${error}`);
       return false;
     }
   }
 
   /**
-   * (향후 확장) 외부 LLM API(예: OpenAI, Anthropic)로 직접 페이로드를 전송합니다.
+   * (?ν썑 ?뺤옣) ?몃? LLM API(?? OpenAI, Anthropic)濡?吏곸젒 ?섏씠濡쒕뱶瑜??꾩넚?⑸땲??
    */
   public async exportToLlmApi(_payload: string, _endpoint: string, _apiKey: string): Promise<string> {
-    // TODO: Fetch API 등을 사용한 직접 전송 로직
+    // TODO: Fetch API ?깆쓣 ?ъ슜??吏곸젒 ?꾩넚 濡쒖쭅
     throw new Error('Not implemented yet');
   }
 
   /**
-   * extension.ts 호환 alias — exportToClipboard()를 위임합니다.
+   * extension.ts ?명솚 alias ??exportToClipboard()瑜??꾩엫?⑸땲??
    */
   public async export(payload: string): Promise<boolean> {
     return this.exportToClipboard(payload);

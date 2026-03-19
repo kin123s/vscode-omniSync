@@ -1,112 +1,93 @@
 import * as vscode from 'vscode';
+import type {
+    ExtendedWorkSession,
+    SessionEvent,
+    TerminalEntry,
+    FileChangeEntry,
+    ChatEntry,
+} from './models/WorkSession';
+import { createWorkSession } from './models/WorkSession';
 
-/**
- * Memory 모듈.
- *
- * VS Code `workspaceState`를 활용하여 작업 추적 데이터를
- * 구조화된 형태로 저장/조회한다.
- * 워크스페이스별로 독립적인 데이터가 유지된다.
- */
-
-// ─── 데이터 타입 정의 ───
-
-/** 터미널 명령어 실행 기록 */
-export interface TerminalEntry {
-    command: string;
-    cwd: string;
-    timestamp: string;
-    exitCode?: number;
-}
-
-/** 파일 변경 기록 */
-export interface FileChangeEntry {
-    filePath: string;
-    changeType: 'modified' | 'created' | 'deleted';
-    timestamp: string;
-    diff?: string;
-}
-
-/** AI 대화 기록 (Chat Participant 캡처분) */
-export interface ChatEntry {
-    participant: string;
-    userMessage: string;
-    assistantResponse: string;
-    timestamp: string;
-}
-
-/** 작업 세션 전체 데이터 */
-export interface TrackingSession {
-    issueKey: string;
-    startedAt: string;
-    endedAt?: string;
-    terminalEntries: TerminalEntry[];
-    fileChanges: FileChangeEntry[];
-    chatEntries: ChatEntry[];
-}
+// 타입 re-export (기존 import 호환 유지)
+export type { TerminalEntry, FileChangeEntry, ChatEntry };
+/** @deprecated TrackingSession → ExtendedWorkSession 으로 전환. 하위 호환용 alias */
+export type TrackingSession = ExtendedWorkSession;
 
 // ─── Memory Manager ───
 
-const STORAGE_KEY = 'universalAgent.trackingSession';
+const STORAGE_KEY = 'orx.sessions';
+const ACTIVE_KEY = 'orx.activeSessionId';
+const MAX_HISTORY = 20;
 
 export class MemoryManager {
     constructor(private readonly state: vscode.Memento) {}
 
-    /** 현재 활성 세션을 가져온다. 없으면 null. */
-    getSession(): TrackingSession | null {
-        return this.state.get<TrackingSession>(STORAGE_KEY) ?? null;
-    }
+    // ─── 세션 생명주기 ───
 
-    /** 새 추적 세션을 시작한다. 기존 세션은 덮어쓴다. */
-    async startSession(issueKey: string): Promise<TrackingSession> {
-        const session: TrackingSession = {
-            issueKey,
-            startedAt: new Date().toISOString(),
-            terminalEntries: [],
-            fileChanges: [],
-            chatEntries: [],
-        };
-        await this.state.update(STORAGE_KEY, session);
+    /** 새 추적 세션을 시작합니다. 기존 활성 세션은 덮어씁니다. */
+    async startSession(issueKey: string, baseCommitHash?: string): Promise<ExtendedWorkSession> {
+        const session = createWorkSession(issueKey, baseCommitHash ?? '');
+        await this.saveSession(session);
+        await this.state.update(ACTIVE_KEY, session.id);
         return session;
     }
 
-    /** 세션을 종료하고 최종 데이터를 반환한다. */
-    async endSession(): Promise<TrackingSession | null> {
+    /** 세션을 종료하고 최종 데이터를 반환합니다. */
+    async endSession(): Promise<ExtendedWorkSession | null> {
         const session = this.getSession();
         if (!session) {
             return null;
         }
         session.endedAt = new Date().toISOString();
-        await this.state.update(STORAGE_KEY, session);
+        session.status = 'completed';
+        await this.saveSession(session);
         return session;
     }
 
-    /** 세션을 삭제한다. */
+    /** 활성 세션을 삭제합니다. */
     async clearSession(): Promise<void> {
-        await this.state.update(STORAGE_KEY, undefined);
+        await this.state.update(ACTIVE_KEY, undefined);
     }
 
-    // ─── 데이터 추가 메서드 ───
+    // ─── 세션 조회 ───
+
+    /** 현재 활성 세션을 가져옵니다. 없으면 null. */
+    getSession(): ExtendedWorkSession | null {
+        const activeId = this.state.get<string>(ACTIVE_KEY);
+        if (!activeId) { return null; }
+
+        const sessions = this.getAllSessions();
+        return sessions.find(s => s.id === activeId) ?? null;
+    }
+
+    /** 저장된 모든 세션(히스토리)을 반환합니다. */
+    getAllSessions(): ExtendedWorkSession[] {
+        return this.state.get<ExtendedWorkSession[]>(STORAGE_KEY) ?? [];
+    }
+
+    /** 활성 세션 목록 (하위 호환) */
+    getActiveSessions(): ExtendedWorkSession[] {
+        const session = this.getSession();
+        return session ? [session] : [];
+    }
+
+    // ─── 데이터 추가 메서드 (기존 호환) ───
 
     /** 터미널 명령어 기록 추가 */
     async addTerminalEntry(entry: TerminalEntry): Promise<void> {
         const session = this.getSession();
-        if (!session) {
-            return;
-        }
+        if (!session) { return; }
         session.terminalEntries.push(entry);
-        await this.state.update(STORAGE_KEY, session);
+        await this.saveSession(session);
     }
 
-    /** 파일 변경 기록 추가 */
+    /** 파일 변경 기록 추가 (같은 파일은 최신으로 갱신) */
     async addFileChange(entry: FileChangeEntry): Promise<void> {
         const session = this.getSession();
-        if (!session) {
-            return;
-        }
+        if (!session) { return; }
 
-        // 같은 파일의 중복 기록 방지 (최신으로 갱신)
         const existingIdx = session.fileChanges.findIndex(
-            fc => fc.filePath === entry.filePath
+            fc => fc.filePath === entry.filePath,
         );
         if (existingIdx >= 0) {
             session.fileChanges[existingIdx] = entry;
@@ -114,39 +95,84 @@ export class MemoryManager {
             session.fileChanges.push(entry);
         }
 
-        await this.state.update(STORAGE_KEY, session);
+        await this.saveSession(session);
     }
 
-    /** AI 대화 기록 추가 */
+    /** AI 채팅 기록 추가 */
     async addChatEntry(entry: ChatEntry): Promise<void> {
         const session = this.getSession();
-        if (!session) {
-            return;
-        }
+        if (!session) { return; }
         session.chatEntries.push(entry);
-        await this.state.update(STORAGE_KEY, session);
+        await this.saveSession(session);
     }
 
-    /** 현재 세션의 요약 통계를 반환한다. */
-    getStats(): { terminal: number; files: number; chats: number } | null {
+    // ─── 신규: Work Session 확장 메서드 ───
+
+    /** 커밋 해시 추가 (중복 방지) */
+    async addCommit(hash: string): Promise<void> {
         const session = this.getSession();
-        if (!session) {
-            return null;
+        if (!session) { return; }
+        if (!session.commits.includes(hash)) {
+            session.commits.push(hash);
+            await this.saveSession(session);
         }
+    }
+
+    /** 이슈 키 연결 추가 (중복 방지) */
+    async addIssue(issueKey: string): Promise<void> {
+        const session = this.getSession();
+        if (!session) { return; }
+        if (!session.issues.includes(issueKey)) {
+            session.issues.push(issueKey);
+            await this.saveSession(session);
+        }
+    }
+
+    /** 경량 이벤트 추가 (note, test만 허용 — 비간섭 원칙) */
+    async addEvent(event: SessionEvent): Promise<void> {
+        const session = this.getSession();
+        if (!session) { return; }
+        session.events.push(event);
+        await this.saveSession(session);
+    }
+
+    /** 사용자 메모 추가 (편의 메서드) */
+    async addNote(content: string): Promise<void> {
+        await this.addEvent({
+            type: 'note',
+            content,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    // ─── 통계 ───
+
+    /** 현재 세션의 요약 통계를 반환합니다. */
+    getStats(): { terminal: number; files: number; chats: number; commits: number; events: number } | null {
+        const session = this.getSession();
+        if (!session) { return null; }
         return {
             terminal: session.terminalEntries.length,
             files: session.fileChanges.length,
             chats: session.chatEntries.length,
+            commits: session.commits.length,
+            events: session.events.length,
         };
     }
 
-    /**
-     * 현재 활성화된 모든 세션을 반환한다.
-     * (향후 멀티 세션 구조 전환 시 확장 포인트)
-     * 현재는 단일 세션만 지원하므로, 활성 세션이 있으면 1개짜리 배열을 반환한다.
-     */
-    getActiveSessions(): TrackingSession[] {
-        const session = this.getSession();
-        return session ? [session] : [];
+    // ─── 내부 영속성 ───
+
+    private async saveSession(session: ExtendedWorkSession): Promise<void> {
+        const sessions = this.getAllSessions();
+        const idx = sessions.findIndex(s => s.id === session.id);
+        if (idx >= 0) {
+            sessions[idx] = session;
+        } else {
+            sessions.push(session);
+        }
+
+        // 최근 MAX_HISTORY 개만 유지
+        const trimmed = sessions.slice(-MAX_HISTORY);
+        await this.state.update(STORAGE_KEY, trimmed);
     }
 }

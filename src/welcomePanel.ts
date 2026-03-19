@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { getPlatform, TrackerPlatform } from './config';
 
 /**
- * Welcome / 로그인 Webview 패널.
+ * Welcome / 濡쒓렇??Webview ?⑤꼸.
  *
- * - Step 1: 플랫폼 선택 (시각적 카드)
- * - Step 2: 선택한 플랫폼에 맞는 로그인 폼
- * - 싱글톤 패턴 — 동시에 하나의 패널만 존재
+ * - Step 1: ?뚮옯???좏깮 (?쒓컖??移대뱶)
+ * - Step 2: ?좏깮???뚮옯?쇱뿉 留욌뒗 濡쒓렇????
+ * - ?깃????⑦꽩 ???숈떆???섎굹???⑤꼸留?議댁옱
  */
 export class WelcomePanel {
     private static _instance: WelcomePanel | undefined;
@@ -18,8 +18,8 @@ export class WelcomePanel {
         private _onConnect: () => void,
     ) {
         this._panel = vscode.window.createWebviewPanel(
-            'universalAgent.welcome',
-            'OmniSync — Connect',
+            'orx.welcome',
+            'Orx ??Connect',
             vscode.ViewColumn.One,
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] },
         );
@@ -40,39 +40,39 @@ export class WelcomePanel {
         this._render();
     }
 
-    /** 패널 열기 (이미 열려 있으면 포커스 + 재렌더링) */
+    /** ?⑤꼸 ?닿린 (?대? ?대젮 ?덉쑝硫??ъ빱??+ ?щ젋?붾쭅) */
     static createOrShow(context: vscode.ExtensionContext, onConnect: () => void): void {
         if (WelcomePanel._instance) {
             WelcomePanel._instance._onConnect = onConnect;
             WelcomePanel._instance._panel.reveal(vscode.ViewColumn.One);
-            WelcomePanel._instance._render(); // 항상 최신 상태로 재렌더링
+            WelcomePanel._instance._render(); // ??긽 理쒖떊 ?곹깭濡??щ젋?붾쭅
             return;
         }
         WelcomePanel._instance = new WelcomePanel(context, onConnect);
     }
 
-    /** 외부에서 패널 닫기 */
+    /** ?몃??먯꽌 ?⑤꼸 ?リ린 */
     static close(): void {
         WelcomePanel._instance?._panel.dispose();
         WelcomePanel._instance = undefined;
     }
 
-    // ── 메시지 핸들러 ──
+    // ?? 硫붿떆吏 ?몃뱾????
 
     private async _handleMessage(msg: Record<string, string>): Promise<void> {
         switch (msg.command) {
             case 'selectPlatform': {
                 const platform = msg.platform as TrackerPlatform;
-                await vscode.workspace.getConfiguration('universalAgent').update(
+                await vscode.workspace.getConfiguration('orx').update(
                     'trackerPlatform', platform, vscode.ConfigurationTarget.Global,
                 );
-                // 선택 후 로그인 폼으로 전환
+                // ?좏깮 ??濡쒓렇???쇱쑝濡??꾪솚
                 this._render(platform);
                 break;
             }
 
             case 'submitCredentials': {
-                const config = vscode.workspace.getConfiguration('universalAgent');
+                const config = vscode.workspace.getConfiguration('orx');
                 if (msg.domain) {
                     await config.update('trackerDomain', msg.domain, vscode.ConfigurationTarget.Global);
                 }
@@ -83,25 +83,25 @@ export class WelcomePanel {
                     await config.update('apiToken', msg.apiToken, vscode.ConfigurationTarget.Global);
                 }
 
-                vscode.window.showInformationMessage('✅ 연결 정보가 저장되었습니다. 연결을 확인합니다...');
+                vscode.window.showInformationMessage('???곌껐 ?뺣낫媛 ??λ릺?덉뒿?덈떎. ?곌껐???뺤씤?⑸땲??..');
                 this._onConnect();
                 WelcomePanel.close();
                 break;
             }
 
             case 'oauthLogin': {
-                await vscode.commands.executeCommand('universal-agent.login');
+                await vscode.commands.executeCommand('orx.doOauthLogin');
                 break;
             }
 
             case 'back': {
-                this._render(); // 플랫폼 선택으로 돌아가기
+                this._render(); // ?뚮옯???좏깮?쇰줈 ?뚯븘媛湲?
                 break;
             }
         }
     }
 
-    // ── 렌더링 ──
+    // ?? ?뚮뜑留???
 
     private _render(selectedPlatform?: TrackerPlatform): void {
         const nonce = getNonce();
@@ -114,7 +114,7 @@ export class WelcomePanel {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
-<title>OmniSync — Connect</title>
+<title>Orx ??Connect</title>
 <style nonce="${nonce}">
   :root {
     --bg: var(--vscode-editor-background);
@@ -201,15 +201,15 @@ export class WelcomePanel {
   .card.disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    /* pointer-events: none; 제거하여 타이틀 클릭 시 안내 메시지 등을 원하면 설정, 현재는 단순 비활성화 */
+    /* pointer-events: none; ?쒓굅?섏뿬 ??댄? ?대┃ ???덈궡 硫붿떆吏 ?깆쓣 ?먰븯硫??ㅼ젙, ?꾩옱???⑥닚 鍮꾪솢?깊솕 */
   }
   .card.disabled .card-title::after {
-    content: ' (준비 중)';
+    content: ' (以鍮?以?';
     font-weight: 400;
     color: var(--muted);
   }
 
-  /* 로그인 폼 */
+  /* 濡쒓렇????*/
   .form-section { display: none; }
   .form-section.active { display: block; }
   .form-group {
@@ -288,86 +288,86 @@ export class WelcomePanel {
 <body>
 <div class="container">
   <div class="header">
-    <h1>OmniSync</h1>
-    <p>${showForm ? '연결 정보를 입력하세요' : '연결할 플랫폼을 선택하세요'}</p>
+    <h1>Orx</h1>
+    <p>${showForm ? '?곌껐 ?뺣낫瑜??낅젰?섏꽭?? : '?곌껐???뚮옯?쇱쓣 ?좏깮?섏꽭??}</p>
   </div>
 
-  <!-- Step 1: 플랫폼 선택 -->
+  <!-- Step 1: ?뚮옯???좏깮 -->
   <div id="platform-select" class="form-section ${!showForm ? 'active' : ''}">
     <div class="cards">
       <div class="card ${current === 'jira-cloud' ? 'selected' : ''}" role="button" tabindex="0" data-platform="jira-cloud">
-        <span class="card-icon">🌐</span>
+        <span class="card-icon">?뙋</span>
         <div class="card-title">Jira Cloud</div>
-        <div class="card-desc">OAuth 2.0 인증</div>
+        <div class="card-desc">OAuth 2.0 ?몄쬆</div>
       </div>
       <div class="card ${current === 'jira-server' ? 'selected' : ''}" role="button" tabindex="0" data-platform="jira-server">
-        <span class="card-icon">🖥️</span>
+        <span class="card-icon">?뼢截?/span>
         <div class="card-title">Jira Server / DC</div>
-        <div class="card-desc">API Token 인증</div>
+        <div class="card-desc">API Token ?몄쬆</div>
       </div>
       <div class="card ${current === 'github' ? 'selected' : ''}" role="button" tabindex="0" data-platform="github">
-        <span class="card-icon">🐙</span>
+        <span class="card-icon">?릻</span>
         <div class="card-title">GitHub</div>
         <div class="card-desc">Personal Access Token</div>
       </div>
       <div class="card disabled" role="button" tabindex="-1">
-        <span class="card-icon">📐</span>
+        <span class="card-icon">?뱪</span>
         <div class="card-title">Linear</div>
         <div class="card-desc">API Key</div>
       </div>
     </div>
   </div>
 
-  <!-- Step 2: 로그인 폼 (Jira Server) -->
+  <!-- Step 2: 濡쒓렇????(Jira Server) -->
   <div id="form-jira-server" class="form-section ${showForm && current === 'jira-server' ? 'active' : ''}">
     <div class="form-group">
-      <label>Jira 도메인</label>
+      <label>Jira ?꾨찓??/label>
       <input type="text" id="domain" placeholder="jira.example.com" />
-      <div class="hint">프로토콜(https://) 제외, 도메인만 입력</div>
+      <div class="hint">?꾨줈?좎퐳(https://) ?쒖쇅, ?꾨찓?몃쭔 ?낅젰</div>
     </div>
     <div class="form-group">
-      <label>이메일</label>
+      <label>?대찓??/label>
       <input type="email" id="email" placeholder="user@example.com" />
     </div>
     <div class="form-group">
       <label>API Token</label>
-      <input type="password" id="apiToken" placeholder="API 토큰을 입력하세요" />
-      <div class="hint">Jira → 프로필 → 보안 → API 토큰 생성</div>
+      <input type="password" id="apiToken" placeholder="API ?좏겙???낅젰?섏꽭?? />
+      <div class="hint">Jira ???꾨줈????蹂댁븞 ??API ?좏겙 ?앹꽦</div>
     </div>
     <div class="actions">
-      <button class="btn-secondary" id="back-jira-server">← 뒤로</button>
-      <button class="btn-primary" id="submit-jira-server">연결</button>
+      <button class="btn-secondary" id="back-jira-server">???ㅻ줈</button>
+      <button class="btn-primary" id="submit-jira-server">?곌껐</button>
     </div>
   </div>
 
-  <!-- Step 2: 로그인 폼 (Jira Cloud — OAuth) -->
+  <!-- Step 2: 濡쒓렇????(Jira Cloud ??OAuth) -->
   <div id="form-jira-cloud" class="form-section ${showForm && current === 'jira-cloud' ? 'active' : ''}">
     <div style="text-align:center; padding: 20px 0;">
-      <span style="font-size:48px;">🔐</span>
-      <p style="margin: 16px 0 8px; font-size: 14px; font-weight: 600;">Atlassian 계정으로 로그인</p>
-      <p style="color: var(--muted); font-size: 12px; margin-bottom: 20px;">브라우저가 열리며 Atlassian OAuth 인증을 진행합니다.</p>
+      <span style="font-size:48px;">?뵍</span>
+      <p style="margin: 16px 0 8px; font-size: 14px; font-weight: 600;">Atlassian 怨꾩젙?쇰줈 濡쒓렇??/p>
+      <p style="color: var(--muted); font-size: 12px; margin-bottom: 20px;">釉뚮씪?곗?媛 ?대━硫?Atlassian OAuth ?몄쬆??吏꾪뻾?⑸땲??</p>
     </div>
     <div class="actions">
-      <button class="btn-secondary" id="back-jira-cloud">← 뒤로</button>
-      <button class="btn-primary" id="submit-jira-cloud">🔑 Atlassian으로 로그인</button>
+      <button class="btn-secondary" id="back-jira-cloud">???ㅻ줈</button>
+      <button class="btn-primary" id="submit-jira-cloud">?뵎 Atlassian?쇰줈 濡쒓렇??/button>
     </div>
   </div>
 
-  <!-- Step 2: 로그인 폼 (GitHub — PAT) -->
+  <!-- Step 2: 濡쒓렇????(GitHub ??PAT) -->
   <div id="form-github" class="form-section ${showForm && current === 'github' ? 'active' : ''}">
     <div class="form-group">
-      <label>GitHub 도메인</label>
+      <label>GitHub ?꾨찓??/label>
       <input type="text" id="gh-domain" placeholder="github.com" value="github.com" />
-      <div class="hint">Enterprise는 github.your-company.com 형태</div>
+      <div class="hint">Enterprise??github.your-company.com ?뺥깭</div>
     </div>
     <div class="form-group">
       <label>Personal Access Token</label>
       <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxx" />
-      <div class="hint">Settings → Developer settings → Personal access tokens</div>
+      <div class="hint">Settings ??Developer settings ??Personal access tokens</div>
     </div>
     <div class="actions">
-      <button class="btn-secondary" id="back-github">← 뒤로</button>
-      <button class="btn-primary" id="submit-github">연결</button>
+      <button class="btn-secondary" id="back-github">???ㅻ줈</button>
+      <button class="btn-primary" id="submit-github">?곌껐</button>
     </div>
   </div>
 </div>
@@ -375,7 +375,7 @@ export class WelcomePanel {
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
 
-  // ── 플랫폼 카드 클릭 (data-platform 속성 기반) ──
+  // ?? ?뚮옯??移대뱶 ?대┃ (data-platform ?띿꽦 湲곕컲) ??
   document.querySelectorAll('.card[data-platform]').forEach(function(card) {
     card.addEventListener('click', function() {
       var platform = card.getAttribute('data-platform');
@@ -388,7 +388,7 @@ export class WelcomePanel {
     });
   });
 
-  // ── 뒤로 버튼 ──
+  // ?? ?ㅻ줈 踰꾪듉 ??
   ['back-jira-server', 'back-jira-cloud', 'back-github'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) {
@@ -398,7 +398,7 @@ export class WelcomePanel {
     }
   });
 
-  // ── Jira Server 연결 ──
+  // ?? Jira Server ?곌껐 ??
   var submitJiraServer = document.getElementById('submit-jira-server');
   if (submitJiraServer) {
     submitJiraServer.addEventListener('click', function() {
@@ -406,14 +406,14 @@ export class WelcomePanel {
       var email = document.getElementById('email').value.trim();
       var apiToken = document.getElementById('apiToken').value.trim();
       if (!domain || !email || !apiToken) {
-        alert('모든 필드를 입력해주세요.');
+        alert('紐⑤뱺 ?꾨뱶瑜??낅젰?댁＜?몄슂.');
         return;
       }
       vscode.postMessage({ command: 'submitCredentials', domain: domain, email: email, apiToken: apiToken });
     });
   }
 
-  // ── Jira Cloud OAuth 로그인 ──
+  // ?? Jira Cloud OAuth 濡쒓렇????
   var submitJiraCloud = document.getElementById('submit-jira-cloud');
   if (submitJiraCloud) {
     submitJiraCloud.addEventListener('click', function() {
@@ -421,14 +421,14 @@ export class WelcomePanel {
     });
   }
 
-  // ── GitHub 연결 ──
+  // ?? GitHub ?곌껐 ??
   var submitGitHub = document.getElementById('submit-github');
   if (submitGitHub) {
     submitGitHub.addEventListener('click', function() {
       var domain = document.getElementById('gh-domain').value.trim();
       var apiToken = document.getElementById('gh-token').value.trim();
       if (!domain || !apiToken) {
-        alert('모든 필드를 입력해주세요.');
+        alert('紐⑤뱺 ?꾨뱶瑜??낅젰?댁＜?몄슂.');
         return;
       }
       vscode.postMessage({ command: 'submitCredentials', domain: domain, apiToken: apiToken, email: '' });

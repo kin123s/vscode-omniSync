@@ -1,23 +1,23 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { MemoryManager } from './memory';
 import { getTrackerConfig } from './config';
 import { JiraTrackerAdapter } from './adapters/JiraTrackerAdapter';
 
 /**
- * Chat Participant 모듈 (Layer 3 — 보너스).
+ * Chat Participant 紐⑤뱢 (Layer 3 ??蹂대꼫??.
  *
- * `@jira` 멘션 시 Copilot Chat에서 직접 대화를 캡처하고,
- * Jira 이슈 데이터에 기반한 응답을 제공한다.
+ * `@jira` 硫섏뀡 ??Copilot Chat?먯꽌 吏곸젒 ??붾? 罹≪쿂?섍퀬,
+ * Jira ?댁뒋 ?곗씠?곗뿉 湲곕컲???묐떟???쒓났?쒕떎.
  *
- * 이 모듈은 Copilot이 설치된 환경에서만 동작하며,
- * 없어도 L1+L2 추적은 정상 작동한다.
+ * ??紐⑤뱢? Copilot???ㅼ튂???섍꼍?먯꽌留??숈옉?섎ŉ,
+ * ?놁뼱??L1+L2 異붿쟻? ?뺤긽 ?묐룞?쒕떎.
  */
 
-const PARTICIPANT_ID = 'universal-agent.assistant';
+const PARTICIPANT_ID = 'orx.assistant';
 
 /**
- * Chat Participant를 등록한다.
- * @returns Disposable (해제 시 참가자 등록 해제)
+ * Chat Participant瑜??깅줉?쒕떎.
+ * @returns Disposable (?댁젣 ??李멸????깅줉 ?댁젣)
  */
 export function registerChatParticipant(
     memory: MemoryManager
@@ -30,7 +30,7 @@ export function registerChatParticipant(
     ): Promise<void> => {
         const userMessage = request.prompt;
 
-        // 1) 대화를 메모리에 기록
+        // 1) ??붾? 硫붾え由ъ뿉 湲곕줉
         const assistantResponse = await handleChatRequest(
             userMessage,
             context,
@@ -38,7 +38,7 @@ export function registerChatParticipant(
             token
         );
 
-        // 2) 추적 세션이 활성 상태이면 메모리에 저장
+        // 2) 異붿쟻 ?몄뀡???쒖꽦 ?곹깭?대㈃ 硫붾え由ъ뿉 ???
         if (memory.getSession()) {
             await memory.addChatEntry({
                 participant: '@jira',
@@ -49,7 +49,7 @@ export function registerChatParticipant(
         }
     };
 
-    // Chat Participant 생성 및 등록
+    // Chat Participant ?앹꽦 諛??깅줉
     const participant = vscode.chat.createChatParticipant(
         PARTICIPANT_ID,
         handler
@@ -60,8 +60,8 @@ export function registerChatParticipant(
 }
 
 /**
- * 실제 채팅 요청 처리 로직.
- * 사용자의 질의 의도를 파악하여 적절히 응답한다.
+ * ?ㅼ젣 梨꾪똿 ?붿껌 泥섎━ 濡쒖쭅.
+ * ?ъ슜?먯쓽 吏덉쓽 ?섎룄瑜??뚯븙?섏뿬 ?곸젅???묐떟?쒕떎.
  */
 async function handleChatRequest(
     prompt: string,
@@ -71,7 +71,7 @@ async function handleChatRequest(
 ): Promise<string> {
     const responseParts: string[] = [];
 
-    // /fetch 슬래시 커맨드: 이슈 정보 조회
+    // /fetch ?щ옒??而ㅻ㎤?? ?댁뒋 ?뺣낫 議고쉶
     const issueKeyMatch = prompt.match(/([A-Z][A-Z0-9_]+-\d+)/i);
 
     if (issueKeyMatch) {
@@ -80,7 +80,7 @@ async function handleChatRequest(
             const config = getTrackerConfig();
             const adapter = new JiraTrackerAdapter(config);
 
-            stream.progress(`${issueKey} 이슈를 조회하고 있습니다...`);
+            stream.progress(`${issueKey} ?댁뒋瑜?議고쉶?섍퀬 ?덉뒿?덈떎...`);
 
             if (token.isCancellationRequested) {
                 return '';
@@ -91,12 +91,12 @@ async function handleChatRequest(
             const response = [
                 `## ${issue.key}: ${issue.summary}`,
                 '',
-                `**상태**: ${issue.status} | **유형**: ${issue.issueType} | **우선순위**: ${issue.priority}`,
+                `**?곹깭**: ${issue.status} | **?좏삎**: ${issue.issueType} | **?곗꽑?쒖쐞**: ${issue.priority}`,
                 '',
-                issue.description ? `### 설명\n${issue.description}` : '',
+                issue.description ? `### ?ㅻ챸\n${issue.description}` : '',
                 '',
                 issue.comments.length > 0
-                    ? `### 최근 코멘트\n${issue.comments
+                    ? `### 理쒓렐 肄붾찘??n${issue.comments
                         .slice(-3)
                         .map(c => `> **${c.author}**: ${c.body}`)
                         .join('\n\n')}`
@@ -108,20 +108,20 @@ async function handleChatRequest(
             stream.markdown(response);
             responseParts.push(response);
         } catch (err: any) {
-            const errMsg = `Jira 이슈 조회 실패: ${err.message}`;
+            const errMsg = `Jira ?댁뒋 議고쉶 ?ㅽ뙣: ${err.message}`;
             stream.markdown(errMsg);
             responseParts.push(errMsg);
         }
     } else {
-        // 일반 대화: 안내 메시지
+        // ?쇰컲 ??? ?덈궡 硫붿떆吏
         const helpMsg = [
-            '안녕하세요! **@jira** 에이전트입니다.',
+            '?덈뀞?섏꽭?? **@jira** ?먯씠?꾪듃?낅땲??',
             '',
-            '사용 방법:',
-            '- `@jira PROJ-123` — Jira 이슈 정보 조회',
-            '- `@jira PROJ-123 이 이슈에 대해 알려줘` — 이슈 컨텍스트 기반 대화',
+            '?ъ슜 諛⑸쾿:',
+            '- `@jira PROJ-123` ??Jira ?댁뒋 ?뺣낫 議고쉶',
+            '- `@jira PROJ-123 ???댁뒋??????뚮젮以? ???댁뒋 而⑦뀓?ㅽ듃 湲곕컲 ???,
             '',
-            '> 💡 추적 모드가 활성화되어 있으면, 이 대화 내용도 자동으로 기록됩니다.',
+            '> ?뮕 異붿쟻 紐⑤뱶媛 ?쒖꽦?붾릺???덉쑝硫? ??????댁슜???먮룞?쇰줈 湲곕줉?⑸땲??',
         ].join('\n');
 
         stream.markdown(helpMsg);

@@ -1,36 +1,36 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 
 /**
  * Planner Webview Panel.
  *
- * LLM이 생성한 작업 계획서(Markdown)를 VS Code Webview Panel에
- * 깔끔한 HTML로 렌더링한다. VS Code 테마에 맞는 스타일링을 적용한다.
+ * LLM???앹꽦???묒뾽 怨꾪쉷??Markdown)瑜?VS Code Webview Panel??
+ * 源붾걫??HTML濡??뚮뜑留곹븳?? VS Code ?뚮쭏??留욌뒗 ?ㅽ??쇰쭅???곸슜?쒕떎.
  */
 export class PlannerViewProvider {
-    public static readonly viewType = 'universalAgent.plannerView';
+    public static readonly viewType = 'orx.plannerView';
 
     private panel: vscode.WebviewPanel | undefined;
 
     constructor() {}
 
     /**
-     * 작업 계획서를 Webview Panel에 표시한다.
-     * 이미 열려 있으면 내용을 갱신하고, 없으면 새로 생성한다.
+     * ?묒뾽 怨꾪쉷?쒕? Webview Panel???쒖떆?쒕떎.
+     * ?대? ?대젮 ?덉쑝硫??댁슜??媛깆떊?섍퀬, ?놁쑝硫??덈줈 ?앹꽦?쒕떎.
      *
-     * @param markdownContent - 계획서 Markdown 텍스트
-     * @param issueKey - Jira 이슈 키 (패널 타이틀용)
+     * @param markdownContent - 怨꾪쉷??Markdown ?띿뒪??
+     * @param issueKey - Jira ?댁뒋 ??(?⑤꼸 ??댄???
      */
     public show(markdownContent: string, issueKey: string): void {
         if (this.panel) {
-            // 기존 패널 갱신
-            this.panel.title = `📋 Plan: ${issueKey}`;
+            // 湲곗〈 ?⑤꼸 媛깆떊
+            this.panel.title = `?뱥 Plan: ${issueKey}`;
             this.panel.webview.html = this.getHtml(markdownContent, issueKey);
             this.panel.reveal(vscode.ViewColumn.Beside);
         } else {
-            // 새 패널 생성
+            // ???⑤꼸 ?앹꽦
             this.panel = vscode.window.createWebviewPanel(
                 PlannerViewProvider.viewType,
-                `📋 Plan: ${issueKey}`,
+                `?뱥 Plan: ${issueKey}`,
                 vscode.ViewColumn.Beside,
                 {
                     enableScripts: false,
@@ -40,7 +40,7 @@ export class PlannerViewProvider {
 
             this.panel.webview.html = this.getHtml(markdownContent, issueKey);
 
-            // 패널 닫힘 시 참조 해제
+            // ?⑤꼸 ?ロ옒 ??李몄“ ?댁젣
             this.panel.onDidDispose(() => {
                 this.panel = undefined;
             });
@@ -48,8 +48,8 @@ export class PlannerViewProvider {
     }
 
     /**
-     * Markdown을 간이 HTML로 변환하여 Webview에 표시할 전체 HTML을 반환한다.
-     * 외부 라이브러리 없이 기본 Markdown 문법을 처리한다.
+     * Markdown??媛꾩씠 HTML濡?蹂?섑븯??Webview???쒖떆???꾩껜 HTML??諛섑솚?쒕떎.
+     * ?몃? ?쇱씠釉뚮윭由??놁씠 湲곕낯 Markdown 臾몃쾿??泥섎━?쒕떎.
      */
     private getHtml(markdown: string, issueKey: string): string {
         const nonce = this.getNonce();
@@ -125,18 +125,18 @@ export class PlannerViewProvider {
             margin: 4px 0;
         }
 
-        /* 체크리스트 스타일 */
+        /* 泥댄겕由ъ뒪???ㅽ???*/
         .checklist {
             list-style: none;
             padding-left: 8px;
         }
         .checklist li::before {
-            content: '☐ ';
+            content: '??';
             color: var(--vscode-textLink-foreground, #3794ff);
             font-size: 1.1em;
         }
         .checklist li.checked::before {
-            content: '☑ ';
+            content: '??';
             color: var(--vscode-testing-iconPassed, #73c991);
         }
 
@@ -172,59 +172,59 @@ export class PlannerViewProvider {
     }
 
     /**
-     * 간이 Markdown → HTML 변환기.
-     * 외부 라이브러리 의존성 없이 기본적인 Markdown 문법을 지원한다.
+     * 媛꾩씠 Markdown ??HTML 蹂?섍린.
+     * ?몃? ?쇱씠釉뚮윭由??섏〈???놁씠 湲곕낯?곸씤 Markdown 臾몃쾿??吏?먰븳??
      */
     private markdownToHtml(md: string): string {
         let html = this.escapeHtml(md);
 
-        // 코드 블록 (```...```) — 먼저 처리하여 내부 파싱 방지
+        // 肄붾뱶 釉붾줉 (```...```) ??癒쇱? 泥섎━?섏뿬 ?대? ?뚯떛 諛⑹?
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
             return `<pre><code>${code.trim()}</code></pre>`;
         });
 
-        // 인라인 코드 (`...`)
+        // ?몃씪??肄붾뱶 (`...`)
         html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-        // 헤더 (### → h3, ## → h2, # → h1)
+        // ?ㅻ뜑 (### ??h3, ## ??h2, # ??h1)
         html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
         html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
         // Blockquote (> ...)
         html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-        // 연속 blockquote 병합
+        // ?곗냽 blockquote 蹂묓빀
         html = html.replace(/<\/blockquote>\n<blockquote>/g, '<br>');
 
-        // 수평선 (---)
+        // ?섑룊??(---)
         html = html.replace(/^---$/gm, '<hr>');
 
-        // 체크리스트 (- [ ] / - [x])
+        // 泥댄겕由ъ뒪??(- [ ] / - [x])
         html = html.replace(/^- \[ \] (.+)$/gm, '<li class="checklist-item">$1</li>');
         html = html.replace(/^- \[x\] (.+)$/gm, '<li class="checklist-item checked">$1</li>');
 
-        // 일반 리스트 (- ...)
+        // ?쇰컲 由ъ뒪??(- ...)
         html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
 
-        // li를 ul로 감싸기
+        // li瑜?ul濡?媛먯떥湲?
         html = html.replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, (match) => {
             const isChecklist = match.includes('checklist-item');
             const cls = isChecklist ? ' class="checklist"' : '';
             return `<ul${cls}>\n${match}</ul>\n`;
         });
 
-        // 볼드 (**...**)
+        // 蹂쇰뱶 (**...**)
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-        // 이탤릭 (*...*)
+        // ?댄깶由?(*...*)
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-        // 단락 변환 (빈 줄 → 단락 분리)
+        // ?⑤씫 蹂??(鍮?以????⑤씫 遺꾨━)
         html = html
             .split('\n\n')
             .map(block => {
                 const trimmed = block.trim();
-                // 이미 블록 요소인 경우 감싸지 않음
+                // ?대? 釉붾줉 ?붿냼??寃쎌슦 媛먯떥吏 ?딆쓬
                 if (
                     trimmed.startsWith('<h') ||
                     trimmed.startsWith('<ul') ||
@@ -253,7 +253,7 @@ export class PlannerViewProvider {
         return text;
     }
 
-    /** HTML 이스케이프 */
+    /** HTML ?댁뒪耳?댄봽 */
     private escapeHtml(text: string): string {
         return text
             .replace(/&/g, '&amp;')

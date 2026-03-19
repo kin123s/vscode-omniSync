@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import type {
@@ -7,12 +7,11 @@ import type {
 } from './webviewProtocol';
 
 /**
- * OmniSync 리포트 리뷰용 Webview 패널.
+ * Orx 由ы룷??由щ럭??Webview ?⑤꼸.
  *
- * React SPA(dist/webview/)를 로드하여 인수인계서 리포트를 인터랙티브하게
- * 렌더링·수정·라우팅할 수 있는 전용 패널.
+ * React SPA(dist/webview/)瑜?濡쒕뱶?섏뿬 ?몄닔?멸퀎??由ы룷?몃? ?명꽣?숉떚釉뚰븯寃? * ?뚮뜑留겶룹닔?빧룸씪?고똿?????덈뒗 ?꾩슜 ?⑤꼸.
  *
- * 싱글톤 패턴 — 동시에 하나의 리포트 패널만 존재.
+ * ?깃????⑦꽩 ???숈떆???섎굹??由ы룷???⑤꼸留?議댁옱.
  */
 export class ReportPanel {
   private static _instance: ReportPanel | undefined;
@@ -20,10 +19,10 @@ export class ReportPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
 
-  /** 현재 표시 중인 리포트 마크다운 (에디터에서 수정 시 업데이트) */
+  /** ?꾩옱 ?쒖떆 以묒씤 由ы룷??留덊겕?ㅼ슫 (?먮뵒?곗뿉???섏젙 ???낅뜲?댄듃) */
   private _currentMarkdown: string = '';
 
-  /** 외부 핸들러 — 액션 메시지를 처리할 콜백 */
+  /** ?몃? ?몃뱾?????≪뀡 硫붿떆吏瑜?泥섎━??肄쒕갚 */
   private _onAction?: (msg: WebviewToExtMessage) => Promise<void>;
 
   private constructor(
@@ -34,8 +33,8 @@ export class ReportPanel {
     this._onAction = onAction;
 
     this._panel = vscode.window.createWebviewPanel(
-      'omnisync.reportReview',
-      'OmniSync — Report',
+      'orx.reportReview',
+      'Orx ??Report',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -48,14 +47,14 @@ export class ReportPanel {
 
     this._panel.iconPath = new vscode.ThemeIcon('file-text');
 
-    // Webview → Extension 메시지 수신
+    // Webview ??Extension 硫붿떆吏 ?섏떊
     this._panel.webview.onDidReceiveMessage(
       (msg: WebviewToExtMessage) => this._handleWebviewMessage(msg),
       null,
       this._disposables,
     );
 
-    // 패널 닫힘 처리
+    // ?⑤꼸 ?ロ옒 泥섎━
     this._panel.onDidDispose(
       () => {
         ReportPanel._instance = undefined;
@@ -65,14 +64,14 @@ export class ReportPanel {
       this._disposables,
     );
 
-    // React SPA HTML 로드
+    // React SPA HTML 濡쒕뱶
     this._panel.webview.html = this._getWebviewContent();
   }
 
-  // ─── 퍼블릭 API ───
+  // ??? ?쇰툝由?API ???
 
   /**
-   * 패널을 열고 리포트 데이터를 전달한다.
+   * ?⑤꼸???닿퀬 由ы룷???곗씠?곕? ?꾨떖?쒕떎.
    */
   static createOrShow(
     extensionUri: vscode.Uri,
@@ -88,7 +87,7 @@ export class ReportPanel {
   }
 
   /**
-   * Extension Host → Webview로 리포트 데이터를 전송한다.
+   * Extension Host ??Webview濡?由ы룷???곗씠?곕? ?꾩넚?쒕떎.
    */
   sendReport(data: {
     markdown: string;
@@ -109,7 +108,7 @@ export class ReportPanel {
   }
 
   /**
-   * 상태 업데이트를 Webview에 전송한다.
+   * ?곹깭 ?낅뜲?댄듃瑜?Webview???꾩넚?쒕떎.
    */
   sendStatus(status: 'loading' | 'ready' | 'error', message?: string): void {
     this._postMessageToWebview({
@@ -119,7 +118,7 @@ export class ReportPanel {
   }
 
   /**
-   * 현재 리포트 마크다운을 반환 (에디터에서 수정된 최신 버전).
+   * ?꾩옱 由ы룷??留덊겕?ㅼ슫??諛섑솚 (?먮뵒?곗뿉???섏젙??理쒖떊 踰꾩쟾).
    */
   getCurrentMarkdown(): string {
     return this._currentMarkdown;
@@ -130,29 +129,29 @@ export class ReportPanel {
     ReportPanel._instance = undefined;
   }
 
-  // ─── 내부 메서드 ───
+  // ??? ?대? 硫붿꽌?????
 
   private _postMessageToWebview(message: ExtToWebviewMessage): void {
     this._panel.webview.postMessage(message);
   }
 
   /**
-   * Webview에서 수신한 액션 메시지를 처리한다.
+   * Webview?먯꽌 ?섏떊???≪뀡 硫붿떆吏瑜?泥섎━?쒕떎.
    */
   private async _handleWebviewMessage(msg: WebviewToExtMessage): Promise<void> {
-    // 에디터에서 수정된 리포트 업데이트
+    // ?먮뵒?곗뿉???섏젙??由ы룷???낅뜲?댄듃
     if (msg.type === 'action:editReport') {
       this._currentMarkdown = msg.payload.markdown;
     }
 
-    // 등록된 외부 핸들러에 위임
+    // ?깅줉???몃? ?몃뱾?ъ뿉 ?꾩엫
     if (this._onAction) {
       await this._onAction(msg);
     }
   }
 
   /**
-   * React SPA 번들을 로드하는 HTML을 생성한다.
+   * React SPA 踰덈뱾??濡쒕뱶?섎뒗 HTML???앹꽦?쒕떎.
    */
   private _getWebviewContent(): string {
     const webviewDistPath = path.join(
@@ -161,41 +160,39 @@ export class ReportPanel {
       'webview',
     );
 
-    // Vite 빌드 결과물인 index.html을 읽어온다
+    // Vite 鍮뚮뱶 寃곌낵臾쇱씤 index.html???쎌뼱?⑤떎
     const indexHtmlPath = path.join(webviewDistPath, 'index.html');
 
-    // index.html이 존재하면 그 안의 경로를 Webview URI로 변환
-    if (fs.existsSync(indexHtmlPath)) {
+    // index.html??議댁옱?섎㈃ 洹??덉쓽 寃쎈줈瑜?Webview URI濡?蹂??    if (fs.existsSync(indexHtmlPath)) {
       let html = fs.readFileSync(indexHtmlPath, 'utf-8');
 
-      // 정적 자원 경로를 Webview URI로 변환
-      const webviewUri = this._panel.webview.asWebviewUri(
+      // ?뺤쟻 ?먯썝 寃쎈줈瑜?Webview URI濡?蹂??      const webviewUri = this._panel.webview.asWebviewUri(
         vscode.Uri.file(webviewDistPath),
       );
 
-      // 상대 경로(./)를 Webview URI로 치환
+      // ?곷? 寃쎈줈(./)瑜?Webview URI濡?移섑솚
       html = html.replace(/(href|src)="\.\/([^"]+)"/g, `$1="${webviewUri}/$2"`);
 
-      // CSP 메타 태그 주입 (기존 것이 없으면 추가)
+      // CSP 硫뷀? ?쒓렇 二쇱엯 (湲곗〈 寃껋씠 ?놁쑝硫?異붽?)
       const nonce = getNonce();
       if (!html.includes('Content-Security-Policy')) {
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${this._panel.webview.cspSource}; font-src ${this._panel.webview.cspSource};">`;
         html = html.replace('<head>', `<head>\n    ${cspMeta}`);
       }
 
-      // script 태그에 nonce 추가
+      // script ?쒓렇??nonce 異붽?
       html = html.replace(/<script /g, `<script nonce="${nonce}" `);
 
       return html;
     }
 
-    // 빌드 안 된 상태 (개발 초기) — 안내 메시지
+    // 鍮뚮뱶 ?????곹깭 (媛쒕컻 珥덇린) ???덈궡 硫붿떆吏
     return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OmniSync Report</title>
+  <title>Orx Report</title>
   <style>
     body {
       font-family: var(--vscode-font-family, sans-serif);
@@ -213,8 +210,8 @@ export class ReportPanel {
 </head>
 <body>
   <div class="message">
-    <h2>⚙️ Webview UI 빌드가 필요합니다</h2>
-    <p>다음 명령어를 실행하세요:</p>
+    <h2>?숋툘 Webview UI 鍮뚮뱶媛 ?꾩슂?⑸땲??/h2>
+    <p>?ㅼ쓬 紐낅졊?대? ?ㅽ뻾?섏꽭??</p>
     <p><code>cd webview-ui && pnpm install && pnpm run build</code></p>
   </div>
 </body>

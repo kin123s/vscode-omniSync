@@ -1,12 +1,12 @@
-{
-  "name": "vscode-omnisync",
-  "displayName": "OmniSync",
+﻿{
+  "name": "vscode-orx",
+  "displayName": "Orx",
   "description": "Multi-Platform AI Project Assistant for VS Code (Jira, Linear, GitHub Issues, etc.)",
   "publisher": "dev-kin123s",
   "version": "0.1.3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kin123s/vscode-omniSync.git"
+    "url": "https://github.com/kin123s/vscode-orx.git"
   },
   "icon": "resources/icon.png",
   "keywords": [
@@ -18,7 +18,7 @@
     "agent",
     "ai",
     "orchestrator",
-    "omnisync"
+    "orx"
   ],
   "engines": {
     "vscode": "^1.100.0"
@@ -35,126 +35,126 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "universal-agent",
-          "title": "Universal Agent",
+          "id": "orx",
+          "title": "Orx",
           "icon": "resources/agent-icon.svg"
         }
       ]
     },
     "views": {
-      "universal-agent": [
+      "orx": [
         {
-          "id": "universalAgent.issueExplorer",
+          "id": "orx.issueExplorer",
           "name": "%view.issueExplorer.name%"
         }
       ]
     },
     "commands": [
       {
-        "command": "universal-agent.login",
+        "command": "orx.login",
         "title": "%command.login.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.logout",
+        "command": "orx.logout",
         "title": "%command.logout.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.fetchIssue",
+        "command": "orx.fetchIssue",
         "title": "%command.fetchIssue.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.generatePlan",
+        "command": "orx.generatePlan",
         "title": "%command.generatePlan.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.startTracking",
+        "command": "orx.startTracking",
         "title": "%command.startTracking.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.stopTracking",
+        "command": "orx.stopTracking",
         "title": "%command.finishReport.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.toggleTracking",
+        "command": "orx.toggleTracking",
         "title": "%command.toggleTracking.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.finishAndReport",
+        "command": "orx.finishAndReport",
         "title": "%command.finishReport.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "universal-agent.refreshTree",
-        "title": "Universal Agent: Refresh",
+        "command": "orx.refreshTree",
+        "title": "Orx: Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "universal-agent.openInBrowser",
-        "title": "Universal Agent: Open in Browser",
+        "command": "orx.openInBrowser",
+        "title": "Orx: Open in Browser",
         "icon": "$(link-external)"
       },
       {
-        "command": "universal-agent.searchIssues",
+        "command": "orx.searchIssues",
         "title": "%command.searchIssues.title%",
         "icon": "$(search)"
       },
       {
-        "command": "universal-agent.selectPlatform",
-        "title": "Universal Agent: Select Platform",
+        "command": "orx.selectPlatform",
+        "title": "Orx: Select Platform",
         "icon": "$(settings-gear)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "universal-agent.refreshTree",
-          "when": "view == universalAgent.issueExplorer",
+          "command": "orx.refreshTree",
+          "when": "view == orx.issueExplorer",
           "group": "navigation"
         },
         {
-          "command": "universal-agent.searchIssues",
-          "when": "view == universalAgent.issueExplorer",
+          "command": "orx.searchIssues",
+          "when": "view == orx.issueExplorer",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "universal-agent.openInBrowser",
+          "command": "orx.openInBrowser",
           "when": "viewItem == agentIssue",
           "group": "inline"
         },
         {
-          "command": "universal-agent.startTracking",
+          "command": "orx.startTracking",
           "when": "viewItem == agentIssue"
         }
       ]
     },
     "chatParticipants": [
       {
-        "id": "universal-agent.assistant",
+        "id": "orx.assistant",
         "name": "agent",
-        "fullName": "Universal Agent",
+        "fullName": "Orx",
         "description": "Multi-platform issue tracking and AI task assistant",
         "isSticky": false
       }
     ],
     "configuration": {
-      "title": "OmniSync",
+      "title": "Orx",
       "properties": {
-        "universalAgent.devMode": {
+        "orx.devMode": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "개발 모드: `true`로 설정 시 라이선스 검증을 건너뛰고 모든 기능을 활성화합니다. **프로덕션에서는 반드시 `false`로 유지하세요.**",
+          "markdownDescription": "媛쒕컻 紐⑤뱶: `true`濡??ㅼ젙 ???쇱씠?좎뒪 寃利앹쓣 嫄대꼫?곌퀬 紐⑤뱺 湲곕뒫???쒖꽦?뷀빀?덈떎. **?꾨줈?뺤뀡?먯꽌??諛섎뱶??`false`濡??좎??섏꽭??**",
           "order": -1
         },
-        "universalAgent.trackerPlatform": {
+        "orx.trackerPlatform": {
           "type": "string",
           "enum": ["jira-cloud", "jira-server", "github", "linear"],
           "enumDescriptions": [
@@ -164,43 +164,43 @@
             "Linear (API Key)"
           ],
           "default": "jira-cloud",
-          "markdownDescription": "연결할 이슈 트래커 플랫폼을 선택합니다.",
+          "markdownDescription": "?곌껐???댁뒋 ?몃옒而??뚮옯?쇱쓣 ?좏깮?⑸땲??",
           "order": 0
         },
-        "universalAgent.licenseServerUrl": {
+        "orx.licenseServerUrl": {
           "type": "string",
           "default": "http://localhost:3000",
-          "description": "라이선스 서버 URL (예: https://license.yourcompany.com)",
+          "description": "?쇱씠?좎뒪 ?쒕쾭 URL (?? https://license.yourcompany.com)",
           "order": 1
         },
-        "universalAgent.trackerDomain": {
+        "orx.trackerDomain": {
           "type": "string",
           "default": "",
-          "markdownDescription": "트래커 인스턴스 도메인 (예: `your-company.atlassian.net`, `github.com`). **Jira Cloud는 OAuth 로그인 후 자동 입력됩니다.**",
+          "markdownDescription": "?몃옒而??몄뒪?댁뒪 ?꾨찓??(?? `your-company.atlassian.net`, `github.com`). **Jira Cloud??OAuth 濡쒓렇?????먮룞 ?낅젰?⑸땲??**",
           "order": 2
         },
-        "universalAgent.email": {
+        "orx.email": {
           "type": "string",
           "default": "",
-          "description": "트래커 로그인에 사용하는 이메일 주소",
+          "description": "?몃옒而?濡쒓렇?몄뿉 ?ъ슜?섎뒗 ?대찓??二쇱냼",
           "order": 3
         },
-        "universalAgent.apiToken": {
+        "orx.apiToken": {
           "type": "string",
           "default": "",
-          "markdownDescription": "API 토큰 또는 Personal Access Token (PAT)",
+          "markdownDescription": "API ?좏겙 ?먮뒗 Personal Access Token (PAT)",
           "order": 4
         },
-        "universalAgent.llmApiKey": {
+        "orx.llmApiKey": {
           "type": "string",
           "default": "",
-          "markdownDescription": "(선택) VS Code에 내장된 AI(Copilot, Antigravity 등)가 없는 경우에만 OpenAI API 키를 입력하세요. **내장 AI가 있으면 이 설정은 비워 두세요.**",
+          "markdownDescription": "(?좏깮) VS Code???댁옣??AI(Copilot, Antigravity ??媛 ?녿뒗 寃쎌슦?먮쭔 OpenAI API ?ㅻ? ?낅젰?섏꽭?? **?댁옣 AI媛 ?덉쑝硫????ㅼ젙? 鍮꾩썙 ?먯꽭??**",
           "order": 5
         },
-        "universalAgent.allowSelfSignedCert": {
+        "orx.allowSelfSignedCert": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "⚠️ **Jira Server/DC 전용**: 자체 서명(self-signed) SSL 인증서를 사용하는 환경에서 HTTPS 연결을 허용합니다. **보안 위험이 있으므로, 신뢰할 수 있는 사내 네트워크에서만 활성화하세요.**",
+          "markdownDescription": "?좑툘 **Jira Server/DC ?꾩슜**: ?먯껜 ?쒕챸(self-signed) SSL ?몄쬆?쒕? ?ъ슜?섎뒗 ?섍꼍?먯꽌 HTTPS ?곌껐???덉슜?⑸땲?? **蹂댁븞 ?꾪뿕???덉쑝誘濡? ?좊ː?????덈뒗 ?щ궡 ?ㅽ듃?뚰겕?먯꽌留??쒖꽦?뷀븯?몄슂.**",
           "order": 6
         }
       }

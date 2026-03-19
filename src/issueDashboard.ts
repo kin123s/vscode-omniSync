@@ -1,17 +1,17 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { JiraTrackerAdapter, JiraIssueData } from './adapters/JiraTrackerAdapter';
 import { TrackerConfig } from './config';
 import { MemoryManager } from './memory';
 
 /**
- * 이슈 대시보드 Webview 패널.
+ * ?댁뒋 ??쒕낫??Webview ?⑤꼸.
  *
- * - 인스턴스를 이슈 키별로 캐싱하여 중복 패널 생성 방지
- * - 요약(AI Summary)은 workspaceState에 캐싱하여 재오픈 시 즉시 복원
- * - Extension ↔ Webview 메시지로 버튼 액션(추적 시작/종료, 새로고침) 처리
+ * - ?몄뒪?댁뒪瑜??댁뒋 ?ㅻ퀎濡?罹먯떛?섏뿬 以묐났 ?⑤꼸 ?앹꽦 諛⑹?
+ * - ?붿빟(AI Summary)? workspaceState??罹먯떛?섏뿬 ?ъ삤????利됱떆 蹂듭썝
+ * - Extension ??Webview 硫붿떆吏濡?踰꾪듉 ?≪뀡(異붿쟻 ?쒖옉/醫낅즺, ?덈줈怨좎묠) 泥섎━
  */
 export class DashboardPanel {
-    // 패널 인스턴스 캐시 (issueKey → panel)
+    // ?⑤꼸 ?몄뒪?댁뒪 罹먯떆 (issueKey ??panel)
     private static readonly _panels = new Map<string, DashboardPanel>();
 
     private readonly _panel: vscode.WebviewPanel;
@@ -19,7 +19,7 @@ export class DashboardPanel {
     private _issueData: JiraIssueData | null = null;
     private _disposables: vscode.Disposable[] = [];
 
-    // ── 생성자 (private) ──
+    // ?? ?앹꽦??(private) ??
 
     private constructor(
         private readonly _context: vscode.ExtensionContext,
@@ -40,7 +40,7 @@ export class DashboardPanel {
             },
         );
 
-        // 패널이 닫힐 때 캐시에서 제거
+        // ?⑤꼸???ロ옄 ??罹먯떆?먯꽌 ?쒓굅
         this._panel.onDidDispose(
             () => {
                 DashboardPanel._panels.delete(issueKey);
@@ -50,22 +50,22 @@ export class DashboardPanel {
             this._disposables,
         );
 
-        // Webview → Extension 메시지 처리
+        // Webview ??Extension 硫붿떆吏 泥섎━
         this._panel.webview.onDidReceiveMessage(
             (message: WebviewMessage) => this._handleMessage(message),
             null,
             this._disposables,
         );
 
-        // 로딩 상태로 초기 렌더링
+        // 濡쒕뵫 ?곹깭濡?珥덇린 ?뚮뜑留?
         this._render(null, true);
     }
 
-    // ── Public API ──
+    // ?? Public API ??
 
     /**
-     * 대시보드 패널을 생성하거나 기존 패널을 활성화한다.
-     * 이슈 데이터를 비동기로 로드 후 렌더링한다.
+     * ??쒕낫???⑤꼸???앹꽦?섍굅??湲곗〈 ?⑤꼸???쒖꽦?뷀븳??
+     * ?댁뒋 ?곗씠?곕? 鍮꾨룞湲곕줈 濡쒕뱶 ???뚮뜑留곹븳??
      */
     static async createOrShow(
         context: vscode.ExtensionContext,
@@ -75,24 +75,24 @@ export class DashboardPanel {
     ): Promise<void> {
         const normalized = issueKey.trim().toUpperCase();
 
-        // 기존 패널이 있으면 포커스만 이동
+        // 湲곗〈 ?⑤꼸???덉쑝硫??ъ빱?ㅻ쭔 ?대룞
         const existing = DashboardPanel._panels.get(normalized);
         if (existing) {
             existing._panel.reveal(vscode.ViewColumn.One);
             return;
         }
 
-        // 신규 패널 생성
+        // ?좉퇋 ?⑤꼸 ?앹꽦
         const dashboard = new DashboardPanel(context, config, memoryManager, normalized);
         DashboardPanel._panels.set(normalized, dashboard);
 
-        // 이슈 데이터 로드
+        // ?댁뒋 ?곗씠??濡쒕뱶
         await dashboard._loadIssue();
     }
 
-    // ── Private Methods ──
+    // ?? Private Methods ??
 
-    /** Jira에서 이슈 데이터를 가져와 렌더링한다 */
+    /** Jira?먯꽌 ?댁뒋 ?곗씠?곕? 媛?몄? ?뚮뜑留곹븳??*/
     private async _loadIssue(): Promise<void> {
         try {
             const adapter = new JiraTrackerAdapter(this._config);
@@ -103,7 +103,7 @@ export class DashboardPanel {
         }
     }
 
-    /** Webview에서 온 메시지를 처리한다 */
+    /** Webview?먯꽌 ??硫붿떆吏瑜?泥섎━?쒕떎 */
     private async _handleMessage(message: WebviewMessage): Promise<void> {
         switch (message.command) {
             case 'refresh':
@@ -113,14 +113,14 @@ export class DashboardPanel {
 
             case 'startTracking':
                 await vscode.commands.executeCommand(
-                    'universal-agent.startTracking',
+                    'orx.startTracking',
                     this._issueKey,
                 );
                 this._refreshTrackingState();
                 break;
 
             case 'stopTracking':
-                await vscode.commands.executeCommand('universal-agent.finishReport');
+                await vscode.commands.executeCommand('orx.finishReport');
                 this._refreshTrackingState();
                 break;
 
@@ -134,13 +134,13 @@ export class DashboardPanel {
 
             case 'generatePlan':
                 await vscode.commands.executeCommand(
-                    'universal-agent.generatePlan',
+                    'orx.generatePlan',
                 );
                 break;
         }
     }
 
-    /** 추적 상태를 갱신하여 Webview에 보낸다 */
+    /** 異붿쟻 ?곹깭瑜?媛깆떊?섏뿬 Webview??蹂대궦??*/
     private _refreshTrackingState(): void {
         const session = this._memoryManager.getSession();
         const isTracking = session?.issueKey === this._issueKey;
@@ -154,12 +154,12 @@ export class DashboardPanel {
         });
     }
 
-    /** 대시보드 HTML을 렌더링한다 */
+    /** ??쒕낫??HTML???뚮뜑留곹븳??*/
     private _render(data: JiraIssueData | null, loading: boolean): void {
         this._panel.webview.html = this._buildHtml(data, loading);
     }
 
-    /** 에러 상태를 렌더링한다 */
+    /** ?먮윭 ?곹깭瑜??뚮뜑留곹븳??*/
     private _renderError(message: string): void {
         this._panel.webview.html = this._buildErrorHtml(message);
     }
@@ -169,7 +169,7 @@ export class DashboardPanel {
         this._disposables = [];
     }
 
-    // ── HTML 빌더 ──
+    // ?? HTML 鍮뚮뜑 ??
 
     private _buildHtml(data: JiraIssueData | null, loading: boolean): string {
         const nonce = this._getNonce();
@@ -350,7 +350,7 @@ export class DashboardPanel {
 </style>
 </head>
 <body>
-${loading ? `<div class="loading"><div class="spinner"></div> 이슈 로딩 중...</div>` : this._buildBody(data, isTracking, stats, priorityIcon, cachedSummary)}
+${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 以?..</div>` : this._buildBody(data, isTracking, stats, priorityIcon, cachedSummary)}
 
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -359,7 +359,7 @@ ${loading ? `<div class="loading"><div class="spinner"></div> 이슈 로딩 중.
     vscode.postMessage({ command, ...extra });
   }
 
-  // Extension에서 오는 메시지 처리
+  // Extension?먯꽌 ?ㅻ뒗 硫붿떆吏 泥섎━
   window.addEventListener('message', (event) => {
     const msg = event.data;
     if (msg.command === 'updateTracking') {
@@ -368,14 +368,14 @@ ${loading ? `<div class="loading"><div class="spinner"></div> 이슈 로딩 중.
       if (badge) {
         badge.className = 'tracking-badge ' + (msg.isTracking ? 'active' : 'inactive');
         badge.innerHTML = msg.isTracking
-          ? '🔴 추적 중 (Tracking Active)'
-          : '⚫ 추적 안 함';
+          ? '?뵶 異붿쟻 以?(Tracking Active)'
+          : '??異붿쟻 ????;
       }
       if (statsDiv) {
         statsDiv.innerHTML = msg.isTracking
           ? \`<div class="stats-row">
-              <div><div class="stat">\${msg.fileCount}</div><div class="stat-label">파일 변경</div></div>
-              <div><div class="stat">\${msg.terminalCount}</div><div class="stat-label">터미널 실행</div></div>
+              <div><div class="stat">\${msg.fileCount}</div><div class="stat-label">?뚯씪 蹂寃?/div></div>
+              <div><div class="stat">\${msg.terminalCount}</div><div class="stat-label">?곕????ㅽ뻾</div></div>
             </div>\`
           : '';
       }
@@ -394,12 +394,12 @@ ${loading ? `<div class="loading"><div class="spinner"></div> 이슈 로딩 중.
         cachedSummary: string,
     ): string {
         if (!data) {
-            return `<div class="loading">이슈 데이터를 불러오지 못했습니다.</div>`;
+            return `<div class="loading">?댁뒋 ?곗씠?곕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??</div>`;
         }
 
         const description = data.description
-            ? this._escapeHtml(data.description.slice(0, 2000)) + (data.description.length > 2000 ? '\n...(이하 생략)' : '')
-            : '(설명 없음)';
+            ? this._escapeHtml(data.description.slice(0, 2000)) + (data.description.length > 2000 ? '\n...(?댄븯 ?앸왂)' : '')
+            : '(?ㅻ챸 ?놁쓬)';
 
         const commentsHtml = data.comments.slice(0, 5).map(c => `
           <div class="comment">
@@ -418,65 +418,65 @@ ${loading ? `<div class="loading"><div class="spinner"></div> 이슈 로딩 중.
 </div>
 
 <div class="actions">
-  <button class="btn-primary" onclick="send('refresh')">🔄 새로고침</button>
+  <button class="btn-primary" onclick="send('refresh')">?봽 ?덈줈怨좎묠</button>
   ${isTracking
-    ? `<button class="btn-danger" onclick="send('stopTracking')">⏹️ 추적 종료 & 리포트</button>`
-    : `<button class="btn-secondary" onclick="send('startTracking')">▶️ 추적 시작</button>`}
-  <button class="btn-secondary" onclick="send('generatePlan')">📋 작업 계획서</button>
-  <button class="btn-secondary" onclick="send('openJira')">🔗 Jira에서 열기</button>
+    ? `<button class="btn-danger" onclick="send('stopTracking')">?뱄툘 異붿쟻 醫낅즺 & 由ы룷??/button>`
+    : `<button class="btn-secondary" onclick="send('startTracking')">?띰툘 異붿쟻 ?쒖옉</button>`}
+  <button class="btn-secondary" onclick="send('generatePlan')">?뱥 ?묒뾽 怨꾪쉷??/button>
+  <button class="btn-secondary" onclick="send('openJira')">?뵕 Jira?먯꽌 ?닿린</button>
 </div>
 
 <div class="grid">
   <div class="card">
-    <div class="card-title">메타데이터</div>
-    <div class="meta-row"><span class="meta-label">유형</span><span class="meta-value">${this._escapeHtml(data.issueType)}</span></div>
-    <div class="meta-row"><span class="meta-label">우선순위</span><span class="meta-value">${priorityIcon} ${this._escapeHtml(data.priority)}</span></div>
-    <div class="meta-row"><span class="meta-label">담당자</span><span class="meta-value">${this._escapeHtml(data.assignee ?? '미지정')}</span></div>
-    <div class="meta-row"><span class="meta-label">보고자</span><span class="meta-value">${this._escapeHtml(data.reporter ?? '-')}</span></div>
-    ${data.labels.length > 0 ? `<div class="meta-row"><span class="meta-label">레이블</span><span class="meta-value">${data.labels.map(l => this._escapeHtml(l)).join(', ')}</span></div>` : ''}
-    ${data.components?.length ? `<div class="meta-row"><span class="meta-label">컴포넌트</span><span class="meta-value">${data.components.map(c => this._escapeHtml(c)).join(', ')}</span></div>` : ''}
+    <div class="card-title">硫뷀??곗씠??/div>
+    <div class="meta-row"><span class="meta-label">?좏삎</span><span class="meta-value">${this._escapeHtml(data.issueType)}</span></div>
+    <div class="meta-row"><span class="meta-label">?곗꽑?쒖쐞</span><span class="meta-value">${priorityIcon} ${this._escapeHtml(data.priority)}</span></div>
+    <div class="meta-row"><span class="meta-label">?대떦??/span><span class="meta-value">${this._escapeHtml(data.assignee ?? '誘몄???)}</span></div>
+    <div class="meta-row"><span class="meta-label">蹂닿퀬??/span><span class="meta-value">${this._escapeHtml(data.reporter ?? '-')}</span></div>
+    ${data.labels.length > 0 ? `<div class="meta-row"><span class="meta-label">?덉씠釉?/span><span class="meta-value">${data.labels.map(l => this._escapeHtml(l)).join(', ')}</span></div>` : ''}
+    ${data.components?.length ? `<div class="meta-row"><span class="meta-label">而댄룷?뚰듃</span><span class="meta-value">${data.components.map(c => this._escapeHtml(c)).join(', ')}</span></div>` : ''}
     ${data.fixVersions?.length ? `<div class="meta-row"><span class="meta-label">Fix Version</span><span class="meta-value">${data.fixVersions.map(v => this._escapeHtml(v)).join(', ')}</span></div>` : ''}
-    ${data.sprint ? `<div class="meta-row"><span class="meta-label">스프린트</span><span class="meta-value">${this._escapeHtml(data.sprint)}</span></div>` : ''}
+    ${data.sprint ? `<div class="meta-row"><span class="meta-label">?ㅽ봽由고듃</span><span class="meta-value">${this._escapeHtml(data.sprint)}</span></div>` : ''}
   </div>
 
   <div class="card">
-    <div class="card-title">작업 추적</div>
+    <div class="card-title">?묒뾽 異붿쟻</div>
     <div id="tracking-badge" class="tracking-badge ${isTracking ? 'active' : 'inactive'}">
-      ${isTracking ? '🔴 추적 중 (Tracking Active)' : '⚫ 추적 안 함'}
+      ${isTracking ? '?뵶 異붿쟻 以?(Tracking Active)' : '??異붿쟻 ????}
     </div>
     <div id="tracking-stats">
       ${isTracking ? `
       <div class="stats-row">
-        <div><div class="stat">${stats?.files ?? 0}</div><div class="stat-label">파일 변경</div></div>
-        <div><div class="stat">${stats?.terminal ?? 0}</div><div class="stat-label">터미널 실행</div></div>
-        <div><div class="stat">${stats?.chats ?? 0}</div><div class="stat-label">AI 대화</div></div>
+        <div><div class="stat">${stats?.files ?? 0}</div><div class="stat-label">?뚯씪 蹂寃?/div></div>
+        <div><div class="stat">${stats?.terminal ?? 0}</div><div class="stat-label">?곕????ㅽ뻾</div></div>
+        <div><div class="stat">${stats?.chats ?? 0}</div><div class="stat-label">AI ???/div></div>
       </div>` : ''}
     </div>
   </div>
 
   ${data.epic ? `
   <div class="card">
-    <div class="card-title">에픽</div>
-    <div class="meta-row"><span class="meta-label">키</span><span class="meta-value">${this._escapeHtml(data.epic.key)}</span></div>
-    <div class="meta-row"><span class="meta-label">요약</span><span class="meta-value">${this._escapeHtml(data.epic.summary)}</span></div>
+    <div class="card-title">?먰뵿</div>
+    <div class="meta-row"><span class="meta-label">??/span><span class="meta-value">${this._escapeHtml(data.epic.key)}</span></div>
+    <div class="meta-row"><span class="meta-label">?붿빟</span><span class="meta-value">${this._escapeHtml(data.epic.summary)}</span></div>
   </div>` : ''}
 </div>
 
 ${cachedSummary ? `
-<div class="section-title">🤖 AI 요약 (캐시)</div>
+<div class="section-title">?쨼 AI ?붿빟 (罹먯떆)</div>
 <div class="description">${this._escapeHtml(cachedSummary)}</div>
 ` : ''}
 
-<div class="section-title">📝 설명</div>
+<div class="section-title">?뱷 ?ㅻ챸</div>
 <div class="description">${description}</div>
 
 ${data.comments.length > 0 ? `
-<div class="section-title">💬 최근 댓글 (${data.comments.length}건)</div>
+<div class="section-title">?뮠 理쒓렐 ?볤? (${data.comments.length}嫄?</div>
 ${commentsHtml}
 ` : ''}
 
 ${data.linkedIssues.length > 0 ? `
-<div class="section-title">🔗 연관 이슈 (${data.linkedIssues.length}건)</div>
+<div class="section-title">?뵕 ?곌? ?댁뒋 (${data.linkedIssues.length}嫄?</div>
 ${data.linkedIssues.slice(0, 5).map(li => `
 <div class="comment">
   <div class="comment-author">${this._escapeHtml(li.linkType)}: ${this._escapeHtml(li.key)}</div>
@@ -485,7 +485,7 @@ ${data.linkedIssues.slice(0, 5).map(li => `
 ` : ''}
 
 ${data.subtasks.length > 0 ? `
-<div class="section-title">📌 하위 이슈 (${data.subtasks.length}건)</div>
+<div class="section-title">?뱦 ?섏쐞 ?댁뒋 (${data.subtasks.length}嫄?</div>
 ${data.subtasks.map(st => `
 <div class="comment">
   <div class="comment-author">${this._escapeHtml(st.key)} <span class="comment-date">${this._escapeHtml(st.status)}</span></div>
@@ -507,10 +507,10 @@ ${data.subtasks.map(st => `
   button { margin-top: 16px; padding: 6px 14px; cursor: pointer; }
 </style>
 </head><body>
-<h2 class="error">⚠️ 이슈 로드 실패</h2>
+<h2 class="error">?좑툘 ?댁뒋 濡쒕뱶 ?ㅽ뙣</h2>
 <p class="error-msg">${this._escapeHtml(message)}</p>
 <script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>
-<button onclick="vscode.postMessage({command:'refresh'})">다시 시도</button>
+<button onclick="vscode.postMessage({command:'refresh'})">?ㅼ떆 ?쒕룄</button>
 </body></html>`;
     }
 
@@ -533,25 +533,25 @@ ${data.subtasks.map(st => `
 
     private _getStatusColor(status: string): string {
         const s = status.toLowerCase();
-        if (s.includes('done') || s.includes('완료')) { return '#28a745'; }
-        if (s.includes('progress') || s.includes('진행')) { return '#007bff'; }
-        if (s.includes('review') || s.includes('검토')) { return '#fd7e14'; }
-        if (s.includes('block') || s.includes('차단')) { return '#dc3545'; }
+        if (s.includes('done') || s.includes('?꾨즺')) { return '#28a745'; }
+        if (s.includes('progress') || s.includes('吏꾪뻾')) { return '#007bff'; }
+        if (s.includes('review') || s.includes('寃??)) { return '#fd7e14'; }
+        if (s.includes('block') || s.includes('李⑤떒')) { return '#dc3545'; }
         return '#6c757d';
     }
 
     private _getPriorityIcon(priority: string): string {
         const p = priority.toLowerCase();
-        if (p === 'highest' || p === 'critical') { return '🔴'; }
-        if (p === 'high') { return '🟠'; }
-        if (p === 'medium') { return '🟡'; }
-        if (p === 'low') { return '🟢'; }
-        if (p === 'lowest') { return '⚪'; }
-        return '⬜';
+        if (p === 'highest' || p === 'critical') { return '?뵶'; }
+        if (p === 'high') { return '?윝'; }
+        if (p === 'medium') { return '?윞'; }
+        if (p === 'low') { return '?윟'; }
+        if (p === 'lowest') { return '??; }
+        return '燧?;
     }
 }
 
-// ── 메시지 타입 ──
+// ?? 硫붿떆吏 ?????
 
 interface WebviewMessage {
     command: 'refresh' | 'startTracking' | 'stopTracking' | 'openJira' | 'generatePlan';

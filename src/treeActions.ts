@@ -1,18 +1,18 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { JiraTreeDataProvider } from './treeView';
 import { JiraTrackerAdapter, JiraFilter } from './adapters/JiraTrackerAdapter';
 import { getTrackerConfig } from './config';
 import { ConnectionManager } from './connectionManager';
 
 /**
- * TreeView 액션 모듈.
+ * TreeView ?≪뀡 紐⑤뱢.
  *
- * 사이드바의 TreeView 항목을 클릭하거나 우클릭할 때
- * 실행되는 커맨드 핸들러를 모아둔다.
+ * ?ъ씠?쒕컮??TreeView ??ぉ???대┃?섍굅???고겢由?븷 ??
+ * ?ㅽ뻾?섎뒗 而ㅻ㎤???몃뱾?щ? 紐⑥븘?붾떎.
  */
 
 /**
- * TreeView 관련 커맨드를 등록하고, Disposable 배열을 반환한다.
+ * TreeView 愿??而ㅻ㎤?쒕? ?깅줉?섍퀬, Disposable 諛곗뿴??諛섑솚?쒕떎.
  */
 export function registerTreeActions(
     treeProvider: JiraTreeDataProvider,
@@ -20,12 +20,12 @@ export function registerTreeActions(
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
 
-    // 참고: refreshTree, searchIssues는 activate()에서 이미 등록됨
+    // 李멸퀬: refreshTree, searchIssues??activate()?먯꽌 ?대? ?깅줉??
 
-    // ── 브라우저에서 열기 ──
+    // ?? 釉뚮씪?곗??먯꽌 ?닿린 ??
     disposables.push(
         vscode.commands.registerCommand(
-            'universal-agent.openInBrowser',
+            'orx.openInBrowser',
             (item?: { meta?: Record<string, any> }) => {
                 const issueKey = item?.meta?.['issueKey'];
                 if (!issueKey) { return; }
@@ -35,17 +35,17 @@ export function registerTreeActions(
                     const url = `https://${config.domain}/browse/${issueKey}`;
                     vscode.env.openExternal(vscode.Uri.parse(url));
                 } catch {
-                    vscode.window.showErrorMessage('Jira 설정을 먼저 입력해 주세요.');
+                    vscode.window.showErrorMessage('Jira ?ㅼ젙??癒쇱? ?낅젰??二쇱꽭??');
                 }
             },
         ),
     );
 
-    // ── JQL 검색 ──
+    // ?? JQL 寃????
     disposables.push(
-        vscode.commands.registerCommand('universal-agent.searchJql', async () => {
+        vscode.commands.registerCommand('orx.searchJql', async () => {
             const jql = await vscode.window.showInputBox({
-                prompt: 'JQL 쿼리를 입력하세요',
+                prompt: 'JQL 荑쇰━瑜??낅젰?섏꽭??,
                 placeHolder: 'project = PROJ AND status = "In Progress"',
                 ignoreFocusOut: true,
             });
@@ -53,7 +53,7 @@ export function registerTreeActions(
             if (!jql) { return; }
 
             await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'JQL 검색 중...' },
+                { location: vscode.ProgressLocation.Notification, title: 'JQL 寃??以?..' },
                 async () => {
                     try {
                         const config = getTrackerConfig();
@@ -61,28 +61,28 @@ export function registerTreeActions(
                         const issues = await adapter.searchByJql(jql, 50);
 
                         treeProvider.setSearchResults(
-                            `${jql.substring(0, 40)}${jql.length > 40 ? '...' : ''} — ${issues.length}건`,
+                            `${jql.substring(0, 40)}${jql.length > 40 ? '...' : ''} ??${issues.length}嫄?,
                             issues,
                         );
 
-                        vscode.window.showInformationMessage(`🔍 검색 완료: ${issues.length}건`);
+                        vscode.window.showInformationMessage(`?뵇 寃???꾨즺: ${issues.length}嫄?);
                     } catch (err: any) {
-                        vscode.window.showErrorMessage(`JQL 검색 실패: ${err.message}`);
+                        vscode.window.showErrorMessage(`JQL 寃???ㅽ뙣: ${err.message}`);
                     }
                 },
             );
         }),
     );
 
-    // ── 필터 실행 ──
+    // ?? ?꾪꽣 ?ㅽ뻾 ??
     disposables.push(
         vscode.commands.registerCommand(
-            'universal-agent.runFilter',
+            'orx.runFilter',
             async (filter?: JiraFilter) => {
                 if (!filter?.jql) { return; }
 
                 await vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Notification, title: `필터 실행: ${filter.name}` },
+                    { location: vscode.ProgressLocation.Notification, title: `?꾪꽣 ?ㅽ뻾: ${filter.name}` },
                     async () => {
                         try {
                             const config = getTrackerConfig();
@@ -90,11 +90,11 @@ export function registerTreeActions(
                             const issues = await adapter.searchByJql(filter.jql, 50);
 
                             treeProvider.setSearchResults(
-                                `${filter.name} — ${issues.length}건`,
+                                `${filter.name} ??${issues.length}嫄?,
                                 issues,
                             );
                         } catch (err: any) {
-                            vscode.window.showErrorMessage(`필터 실행 실패: ${err.message}`);
+                            vscode.window.showErrorMessage(`?꾪꽣 ?ㅽ뻾 ?ㅽ뙣: ${err.message}`);
                         }
                     },
                 );

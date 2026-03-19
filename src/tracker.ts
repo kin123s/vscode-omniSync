@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { MemoryManager, FileChangeEntry, TerminalEntry } from './memory';
 
 /**
- * Tracker 모듈.
+ * Tracker 筌뤴뫀諭?
  *
- * AI 도구 비의존적(tool-agnostic) 작업 추적기.
- * Layer 1 (파일 변경) + Layer 2 (터미널 명령어)를 실시간 감시하여
- * MemoryManager에 기록한다.
+ * AI ?袁㏓럡 ??쑴?썼??곸읅(tool-agnostic) ?臾믩씜 ?곕뗄?삥묾?
+ * Layer 1 (???뵬 癰궰野? + Layer 2 (?怨???筌뤿굝議??????쇰뻻揶?揶쏅Ŋ???뤿연
+ * MemoryManager??疫꿸퀡以??뺣뼄.
  */
 export class Tracker {
     private disposables: vscode.Disposable[] = [];
@@ -15,35 +15,35 @@ export class Tracker {
     private gitBaseRef: string | null = null;
 
     constructor(private readonly memory: MemoryManager) {
-        // 상태바 아이콘 생성 (추적 상태 표시)
+        // ?怨밴묶獄??袁⑹뵠????밴쉐 (?곕뗄???怨밴묶 ??뽯뻻)
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Left,
             100
         );
-        this.statusBarItem.command = 'universal-agent.toggleTracking';
+        this.statusBarItem.command = 'orx.toggleTracking';
         this.updateStatusBar();
     }
 
-    /** 추적이 활성화 상태인지 여부 */
+    /** ?곕뗄?????뽮쉐???怨밴묶?紐? ??? */
     get tracking(): boolean {
         return this.isActive;
     }
 
     /**
-     * 추적을 시작한다.
-     * 파일 저장 이벤트와 터미널 실행 이벤트를 감시한다.
+     * ?곕뗄?????뽰삂??뺣뼄.
+     * ???뵬 ??????源?紐? ?怨?????쎈뻬 ??源?紐? 揶쏅Ŋ???뺣뼄.
      */
     async start(issueKey: string): Promise<void> {
         if (this.isActive) {
             return;
         }
 
-        await this.memory.startSession(issueKey);
-
-        // Git 현재 HEAD를 기준점으로 저장 (나중에 diff 계산용)
+        // Git ?꾩옱 HEAD瑜?湲곗??먯쑝濡????(?섑뼢??diff 怨꾩궛??
         this.gitBaseRef = await this.getGitHead();
 
-        // ── L1: 파일 변경 추적 ──
+        await this.memory.startSession(issueKey, this.gitBaseRef ?? undefined);
+
+        // ???? L1: ???뵬 癰궰野??곕뗄??????
         const saveWatcher = vscode.workspace.onDidSaveTextDocument(
             async (doc) => {
                 await this.onFileSaved(doc);
@@ -51,7 +51,7 @@ export class Tracker {
         );
         this.disposables.push(saveWatcher);
 
-        // 파일 생성/삭제 감시
+        // ???뵬 ??밴쉐/????揶쏅Ŋ??
         const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*');
         fileWatcher.onDidCreate(async (uri) => {
             await this.memory.addFileChange({
@@ -69,7 +69,7 @@ export class Tracker {
         });
         this.disposables.push(fileWatcher);
 
-        // ── L2: 터미널 명령어 추적 ──
+        // ???? L2: ?怨???筌뤿굝議???곕뗄??????
         const terminalWatcher = vscode.window.onDidStartTerminalShellExecution(
             async (e) => {
                 await this.onTerminalExecution(e);
@@ -83,7 +83,7 @@ export class Tracker {
     }
 
     /**
-     * 추적을 중지한다. 이벤트 리스너를 모두 해제한다.
+     * ?곕뗄???餓λ쵐???뺣뼄. ??源???귐딅뮞??? 筌뤴뫀紐???곸젫??뺣뼄.
      */
     stop(): void {
         this.disposables.forEach(d => d.dispose());
@@ -92,22 +92,22 @@ export class Tracker {
         this.updateStatusBar();
     }
 
-    /** 리소스 해제 */
+    /** ?귐딅꺖????곸젫 */
     dispose(): void {
         this.stop();
         this.statusBarItem.dispose();
     }
 
-    // ─── L1: 파일 변경 처리 ───
+    // ?????? L1: ???뵬 癰궰野?筌ｌ꼶????????
 
     private async onFileSaved(doc: vscode.TextDocument): Promise<void> {
-        // node_modules, dist 등 무시
+        // node_modules, dist ???얜똻??
         const relativePath = vscode.workspace.asRelativePath(doc.uri);
         if (this.shouldIgnorePath(relativePath)) {
             return;
         }
 
-        // Git diff 계산 (가능한 경우)
+        // Git diff ?④쑴沅?(揶쎛?館釉?野껋럩??
         let diff: string | undefined;
         if (this.gitBaseRef) {
             diff = await this.getFileDiff(relativePath);
@@ -123,20 +123,20 @@ export class Tracker {
         await this.memory.addFileChange(entry);
     }
 
-    // ─── L2: 터미널 명령어 처리 ───
+    // ?????? L2: ?怨???筌뤿굝議??筌ｌ꼶????????
 
     private async onTerminalExecution(
         e: vscode.TerminalShellExecutionStartEvent
     ): Promise<void> {
         const execution = e.execution;
 
-        // 명령어 텍스트 추출
+        // 筌뤿굝議????용뮞???곕뗄??
         const commandLine = execution.commandLine?.value ?? '';
         if (!commandLine) {
             return;
         }
 
-        // 명령어 실행 완료를 기다려 exitCode를 수집
+        // 筌뤿굝議????쎈뻬 ?袁⑥┷??疫꿸퀡???exitCode????륁춿
         const cwd = execution.cwd
             ? vscode.workspace.asRelativePath(execution.cwd)
             : '';
@@ -147,7 +147,7 @@ export class Tracker {
             timestamp: new Date().toISOString(),
         };
 
-        // 종료 이벤트가 발생하면 exitCode 업데이트
+        // ?ル굝利???源?硫? 獄쏆뮇源??롢늺 exitCode ??낅쑓??꾨뱜
         const endWatcher = vscode.window.onDidEndTerminalShellExecution(
             async (endEvent) => {
                 if (endEvent.execution === execution) {
@@ -158,7 +158,7 @@ export class Tracker {
             }
         );
 
-        // 타임아웃: 30초 후에도 종료 안 되면 그냥 기록
+        // ???袁⑸툡?? 30???袁⑸퓠???ル굝利?????롢늺 域밸챶源?疫꿸퀡以?
         setTimeout(async () => {
             endWatcher.dispose();
             if (entry.exitCode === undefined) {
@@ -167,11 +167,11 @@ export class Tracker {
         }, 30000);
     }
 
-    // ─── Git 유틸리티 ───
+    // ?????? Git ?醫뤿뼢?귐뗫뼒 ??????
 
     /**
-     * 현재 Git HEAD의 커밋 해시를 가져온다.
-     * Git이 초기화되지 않았으면 null을 반환.
+     * ?袁⑹삺 Git HEAD???뚣끇而???곷뻻??揶쎛?紐꾩궔??
+     * Git???λ뜃由?遺얜┷筌왖 ??녿릭??겹늺 null??獄쏆꼹??
      */
     private async getGitHead(): Promise<string | null> {
         try {
@@ -195,7 +195,7 @@ export class Tracker {
     }
 
     /**
-     * 특정 파일의 Git diff를 가져온다 (추적 시작 시점 대비).
+     * ?諭?????뵬??Git diff??揶쎛?紐꾩궔??(?곕뗄????뽰삂 ??뽰젎 ????.
      */
     private async getFileDiff(relativePath: string): Promise<string | undefined> {
         try {
@@ -219,9 +219,9 @@ export class Tracker {
         }
     }
 
-    // ─── 유틸리티 ───
+    // ?????? ?醫뤿뼢?귐뗫뼒 ??????
 
-    /** 무시할 경로 패턴 */
+    /** ?얜똻???野껋럥以????쉘 */
     private shouldIgnorePath(path: string): boolean {
         const ignorePatterns = [
             'node_modules',
@@ -233,7 +233,7 @@ export class Tracker {
         return ignorePatterns.some(p => path.includes(p));
     }
 
-    /** 상태바 UI 업데이트 */
+    /** ?怨밴묶獄?UI ??낅쑓??꾨뱜 */
     private updateStatusBar(): void {
         const session = this.memory.getSession();
         if (this.isActive && session) {
@@ -242,13 +242,13 @@ export class Tracker {
             const termCount = stats?.terminal ?? 0;
             this.statusBarItem.text = `$(record) ${session.issueKey} | $(file) ${fileCount} $(terminal) ${termCount}`;
             this.statusBarItem.tooltip =
-                `파일: ${fileCount} | 터미널: ${termCount} | 대화: ${stats?.chats ?? 0}\n클릭하여 추적 중지`;
+                `???뵬: ${fileCount} | ?怨??? ${termCount} | ???? ${stats?.chats ?? 0}\n?????뤿연 ?곕뗄??餓λ쵐?`;
             this.statusBarItem.backgroundColor = new vscode.ThemeColor(
                 'statusBarItem.warningBackground'
             );
         } else {
             this.statusBarItem.text = '$(circle-slash) Tracking: Off';
-            this.statusBarItem.tooltip = '클릭하여 추적 시작';
+            this.statusBarItem.tooltip = '?????뤿연 ?곕뗄????뽰삂';
             this.statusBarItem.backgroundColor = undefined;
         }
     }
