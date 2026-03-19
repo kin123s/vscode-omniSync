@@ -23,7 +23,6 @@ import { WelcomePanel } from './welcomePanel';
 import { ReportPanel } from './ReportPanel';
 import type { WebviewToExtMessage } from './webviewProtocol';
 import { GitTrigger } from './trigger/GitTrigger';
-import { ChangeClassifier } from './analyzer/ChangeClassifier';
 import { logger } from './utils/logger';
 
 // ── Global singleton instances ──
