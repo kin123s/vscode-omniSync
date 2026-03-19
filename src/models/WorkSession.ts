@@ -25,8 +25,15 @@ export interface TestEvent {
     timestamp: string;
 }
 
+/** 에러 발생 기록 */
+export interface ErrorEvent {
+    type: 'error';
+    message: string;
+    timestamp: string;
+}
+
 /** 세션 이벤트 합집합 (비간섭 원칙: 사용자 명시 + 결과만) */
-export type SessionEvent = NoteEvent | TestEvent;
+export type SessionEvent = NoteEvent | TestEvent | ErrorEvent;
 
 // ─── 변경 분류 결과 ───
 
@@ -156,6 +163,8 @@ export function buildTimeline(session: ExtendedWorkSession): string[] {
             lines.push(`[NOTE] ${event.timestamp} — ${event.content}`);
         } else if (event.type === 'test') {
             lines.push(`[TEST] ${event.timestamp} — ${event.result}${event.detail ? ': ' + event.detail : ''}`);
+        } else if (event.type === 'error') {
+            lines.push(`[ERROR] ${event.timestamp} — ${event.message}`);
         }
     }
 

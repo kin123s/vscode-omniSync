@@ -24,6 +24,7 @@ import { ReportPanel } from './ReportPanel';
 import type { WebviewToExtMessage } from './webviewProtocol';
 import { GitTrigger } from './trigger/GitTrigger';
 import { ChangeClassifier } from './analyzer/ChangeClassifier';
+import { logger } from './utils/logger';
 
 // ??? ?깃????몄뒪?댁뒪 ???
 let plannerView: PlannerViewProvider;
@@ -42,7 +43,9 @@ let changeClassifier: ChangeClassifier;
 let initialized = false;
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('[Orx Orchestrator] ?듭뒪?먯뀡???쒖꽦?붾릺?덉뒿?덈떎.');
+    logger.init();
+    console.log('[Orx Orchestrator] 익스텐션이 활성화되었습니다.');
+    logger.info('Orx Orchestrator 활성화');
 
     // ?? TreeView ?ъ씠?쒕컮 珥덇린??(??긽 ?쒖떆, ?몄쬆 ?щ?? 臾닿?) ??
     connectionManager = new ConnectionManager();
@@ -78,7 +81,9 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // ?곌껐 ?곹깭 ?뺤씤 (?ㅽ뙣?대룄 臾댁떆 ???ㅼ젙 誘몄엯????
-    connectionManager.checkConnection().catch(() => {});
+    connectionManager.checkConnection().catch((err) => {
+        logger.warn(`초기 연결 확인 실패 (설정 미입력 가능): ${err instanceof Error ? err.message : String(err)}`);
+    });
 
     // ?? [DEV MODE] 媛쒕컻 紐⑤뱶 諛붿씠?⑥뒪 ??
     if (isDevMode()) {
@@ -233,7 +238,7 @@ function initializeFullFeatures(context: vscode.ExtensionContext): void {
 
     // TreeView???대? activate()?먯꽌 珥덇린?붾릺?덉쑝誘濡? ?곌껐 ?곹깭留?媛깆떊
     connectionManager.checkConnection().catch((err) => {
-        console.warn('[Orx] ?몃옒而??곌껐 ?뺤씤 ?ㅽ뙣 (?ㅼ젙 誘몄엯??):', err.message);
+        logger.warn(`트래커 연결 확인 실패: ${err instanceof Error ? err.message : String(err)}`);
     });
 
     let treeActionDisposables: vscode.Disposable[] = [];
@@ -454,7 +459,8 @@ function initializeFullFeatures(context: vscode.ExtensionContext): void {
                                     reportText = result.report;
                                     provider = result.provider;
                                     model = result.model;
-                                } catch {
+                                } catch (llmErr) {
+                                    logger.error('LLM 리포트 생성 실패, 간단 리포트로 대체', llmErr);
                                     reportText = generateSimpleReport(session);
                                 }
                             }
@@ -465,7 +471,10 @@ function initializeFullFeatures(context: vscode.ExtensionContext): void {
                         if (token.isCancellationRequested) { return; }
 
                         // Phase 4: ?ㅼ??ㅽ듃?덉씠?곕? ?듯븳 ?섏씠濡쒕뱶 鍮뚮뱶
-                        const gitDiff = await gitDiffCollector.collect().catch(() => '');
+                        const gitDiff = await gitDiffCollector.collect().catch((err) => {
+                            logger.warn(`Git diff 수집 실패: ${err instanceof Error ? err.message : String(err)}`);
+                            return '';
+                        });
                         const terminalLog = terminalListener.getLog();
                         payloadBuilder.build({
                             issueId: session.issueKey,
