@@ -1,10 +1,10 @@
-﻿/**
- * ?듭뒪?먯뀡 ?섎챸二쇨린 ?댁뿉???몄쬆 ?곹깭瑜?愿由ы븯??留ㅻ땲?.
+/**
+ * Extension licensing manager.
  *
- * - SecretStorage 湲곕컲 ?좏겙 / ?쇱씠?좎뒪??/ ?대찓????Β룸났??
- * - ?곹깭 蹂寃??대깽??諛쒗뻾 (UI 媛깆떊 ?몃━嫄?
- * - Heartbeat 30遺?二쇨린 ??대㉧
- * - Jira API Token 湲곕컲 ?몄쬆 (Settings ??/myself 寃利????쇱씠?좎뒪 ?쒖꽦??
+ * - SecretStorage-based token / license key / email management
+ * - Auth status change event emission (for UI triggers)
+ * - Heartbeat every 30 minutes
+ * - Jira API Token-based authentication (Settings → /myself check → license activation)
  */
 
 import * as vscode from 'vscode';
@@ -16,7 +16,7 @@ import {
 import { getTrackerConfig } from './config';
 import { JiraTrackerAdapter } from './adapters/JiraTrackerAdapter';
 
-// ?? SecretStorage ???곸닔 ???????????????????????????????
+// ── SecretStorage Keys ──
 
 const SECRET_KEYS = {
     JWT_TOKEN: 'orx.jwtToken',
@@ -24,11 +24,11 @@ const SECRET_KEYS = {
     USER_EMAIL: 'orx.userEmail',
 } as const;
 
-// ?? Heartbeat 媛꾧꺽 (30遺? ???????????????????????????????
+// ── Heartbeat Interval (30 minutes) ──
 
 const HEARTBEAT_INTERVAL_MS = 30 * 60 * 1_000;
 
-// ?? ?몄쬆 ?곹깭 ?????????????????????????????????????????
+// ── Auth Status Type ──
 
 export type AuthStatus =
     | 'authenticated'
@@ -36,7 +36,7 @@ export type AuthStatus =
     | 'checking'
     | 'error';
 
-// ?? LicenseManager ?대옒?????????????????????????????????
+// ── LicenseManager Class ──
 
 export class LicenseManager implements vscode.Disposable {
     private _status: AuthStatus = 'unauthenticated';
@@ -44,7 +44,7 @@ export class LicenseManager implements vscode.Disposable {
     private _token: string | null = null;
     private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
-    // ?곹깭 蹂寃??대깽??(UI 媛깆떊 ?몃━嫄?
+    // Auth status change event (for UI triggers)
     private _onDidChangeAuth = new vscode.EventEmitter<AuthStatus>();
     public readonly onDidChangeAuth = this._onDidChangeAuth.event;
 
@@ -55,35 +55,35 @@ export class LicenseManager implements vscode.Disposable {
         private readonly extensionVersion: string,
     ) {}
 
-    // ?? Getters ??
+    // ── Getters ──
 
-    /** ?몄쬆 ?곹깭 */
+    /** Current auth status */
     get status(): AuthStatus {
         return this._status;
     }
 
-    /** ?몄쬆 ?щ? (boolean shorthand) */
+    /** Shorthand boolean for authenticated state */
     get isAuthenticated(): boolean {
         return this._status === 'authenticated';
     }
 
-    /** ?꾩옱 ?쇱씠?좎뒪 ?뺣낫 */
+    /** Current license info */
     get licenseInfo(): LicenseInfo | null {
         return this._licenseInfo;
     }
 
-    /** ?꾩옱 ?뚮옖 ?대쫫 */
+    /** Current plan name */
     get planName(): string {
         return this._licenseInfo?.plan.name ?? 'none';
     }
 
-    // ?? 珥덇린????
+    // ── Initialization ──
 
     /**
-     * ?듭뒪?먯뀡 ?쒖꽦?????몄텧.
-     * 1) SecretStorage?먯꽌 湲곗〈 ?좏겙 蹂듭썝 ?쒕룄
-     * 2) ?좏겙 ?덉쑝硫???verifyLicense()
-     * 3) ?좏겙 ?놁쑝硫???鍮꾩씤利??곹깭 ?좎?
+     * Called on extension activation.
+     * 1) Attempts to restore saved token from SecretStorage
+     * 2) If token exists → verifyLicense()
+     * 3) If no token → stays unauthenticated
      */
     async initialize(): Promise<void> {
         this.setStatus('checking');
@@ -95,7 +95,7 @@ export class LicenseManager implements vscode.Disposable {
             if (savedToken && savedKey) {
                 this._token = savedToken;
 
-                // ??λ맂 ?쇱씠?좎뒪 ?ㅻ줈 ?쒕쾭 寃利??쒕룄
+                // Verify saved license with server
                 const result = await this.client.verifyLicense(savedKey, this.machineId);
 
                 if (result.valid) {
@@ -110,11 +110,11 @@ export class LicenseManager implements vscode.Disposable {
                     return;
                 }
 
-                // 寃利??ㅽ뙣 ???좏겙 ?먭린
+                // Verification failed — clear tokens
                 await this.clearSecrets();
             }
 
-            // ?좏겙 ?놁쓬 ??Jira ?ㅼ젙???덉쑝硫??먮룞 ?몄쬆 ?쒕룄
+            // No token — attempt auto-authentication if Jira settings are present
             try {
                 const config = getTrackerConfig();
                 if (config.domain && config.email && config.apiToken) {
@@ -122,53 +122,53 @@ export class LicenseManager implements vscode.Disposable {
                     if (success) { return; }
                 }
             } catch {
-                // Jira ?ㅼ젙 誘몄셿猷???鍮꾩씤利??곹깭 ?좎?
+                // Jira settings incomplete — stay unauthenticated
             }
 
             this.setStatus('unauthenticated');
         } catch (err) {
-            console.warn('[LicenseManager] 珥덇린??以??ㅻ쪟:', err);
-            // ?ㅽ듃?뚰겕 ?먮윭 ??????λ맂 ?좏겙???덉쑝硫??꾩떆 ?덉슜(Graceful Degradation)
+            console.warn('[LicenseManager] Initialization error:', err);
+            // Network error? — if saved token exists, use it temporarily (Graceful Degradation)
             const savedToken = await this.secrets.get(SECRET_KEYS.JWT_TOKEN);
             if (savedToken) {
                 this._token = savedToken;
                 this.setStatus('authenticated');
-                console.info('[LicenseManager] ?ㅽ봽?쇱씤 紐⑤뱶: 罹먯떆???좏겙 湲곕컲 ?꾩떆 ?덉슜');
+                console.info('[LicenseManager] Offline mode: using cached token');
             } else {
                 this.setStatus('error');
             }
         }
     }
 
-    // ?? 濡쒓렇????
+    // ── Login ──
 
     /**
-     * Jira Settings 湲곕컲 ?몄쬆.
-     * Settings??email/apiToken?쇰줈 Jira /myself ?몄텧 ???깃났 ???쇱씠?좎뒪 ?쒖꽦??
-     * InputBox ?놁씠 ?먮룞 ?몄쬆.
+     * Jira Settings-based authentication.
+     * Uses Settings email/apiToken to verify via Jira /myself endpoint,
+     * then activates license. No InputBox prompts — fully automatic.
      *
-     * @returns ?깃났 ?щ?
+     * @returns Whether login succeeded
      */
     async login(): Promise<boolean> {
-        // 1) Settings?먯꽌 Jira ?ㅼ젙 ?쎄린
+        // 1) Read Jira settings
         let config;
         try {
             config = getTrackerConfig();
         } catch {
             vscode.window.showErrorMessage(
-                'Jira ?ㅼ젙??癒쇱? ?꾨즺??二쇱꽭?? (Settings ??jiraDomain, email, apiToken)'
+                'Please complete Jira settings first (Settings → trackerDomain, email, apiToken).'
             );
             await vscode.commands.executeCommand('workbench.action.openSettings', 'orx');
             return false;
         }
 
-        // 2) Jira /myself ?몄텧濡?API Token ?좏슚??寃利?
+        // 2) Verify API Token via Jira /myself
         this.setStatus('checking');
         try {
             const adapter = new JiraTrackerAdapter(config);
             const me = await adapter.getMyself();
 
-            // 3) ?쇱씠?좎뒪 ?쒕쾭???쒖꽦???붿껌 (鍮꾨?踰덊샇 ?놁씠!)
+            // 3) Request license activation from server (no serial number needed!)
             const result = await this.client.activate({
                 email: config.email,
                 jiraDomain: config.domain,
@@ -177,7 +177,7 @@ export class LicenseManager implements vscode.Disposable {
                 extensionVersion: this.extensionVersion,
             });
 
-            // 4) SecretStorage?????
+            // 4) Save to SecretStorage
             await this.secrets.store(SECRET_KEYS.JWT_TOKEN, result.token);
             await this.secrets.store(SECRET_KEYS.LICENSE_KEY, result.license.key);
             await this.secrets.store(SECRET_KEYS.USER_EMAIL, result.user.email);
@@ -188,25 +188,25 @@ export class LicenseManager implements vscode.Disposable {
             this.startHeartbeat();
 
             vscode.window.showInformationMessage(
-                `???몄쬆 ?꾨즺! (${me.displayName} ??${result.license.plan.name} ?뚮옖)`
+                `✅ Authenticated! (${me.displayName} — ${result.license.plan.name} plan)`
             );
             return true;
         } catch (err) {
             this.setStatus('error');
             const message = err instanceof LicenseServerError
-                ? `?몄쬆 ?ㅽ뙣: ${err.message}`
+                ? `Authentication failed: ${err.message}`
                 : err instanceof Error
-                    ? `?몄쬆 ?ㅽ뙣: ${err.message}`
-                    : '?몄쬆 ?ㅽ뙣: ?????녿뒗 ?ㅻ쪟';
+                    ? `Authentication failed: ${err.message}`
+                    : 'Authentication failed: Unknown error';
             vscode.window.showErrorMessage(message);
             return false;
         }
     }
 
-    // ?? 濡쒓렇?꾩썐 ??
+    // ── Logout ──
 
     /**
-     * 濡쒓렇?꾩썐 ??SecretStorage ?좏겙 ??젣 + ?곹깭 珥덇린??
+     * Logout: clear SecretStorage tokens and reset state.
      */
     async logout(): Promise<void> {
         await this.clearSecrets();
@@ -215,22 +215,22 @@ export class LicenseManager implements vscode.Disposable {
         this.stopHeartbeat();
         this.setStatus('unauthenticated');
 
-        vscode.window.showInformationMessage('?뵑 濡쒓렇?꾩썐 ?섏뿀?듬땲??');
+        vscode.window.showInformationMessage('👋 Logged out successfully.');
     }
 
-    // ?? 湲곕뒫 ?ъ슜??泥댄겕 (?윞 沅뚯옣) ??
+    // ── Feature Usage Check (Quota Enforcement) ──
 
     /**
-     * AI 湲곕뒫 ?ъ슜 ???몄텧?섏뿬 ?ъ슜?됱쓣 泥댄겕.
-     * 珥덇낵 ???낃렇?덉씠???덈궡 硫붿떆吏 ?쒖떆.
+     * Checks feature usage quota before invoking AI features.
+     * Shows upgrade prompt if quota is exceeded.
      *
-     * @param feature 湲곕뒫 ?앸퀎??(?? 'ai_summary', 'auto_report')
-     * @returns ?ъ슜 媛???щ?
+     * @param feature Feature identifier (e.g. 'ai_summary', 'auto_report')
+     * @returns Whether the feature can be used
      */
     async checkFeatureUsage(feature: string): Promise<boolean> {
         if (!this._token) {
             vscode.window.showWarningMessage(
-                '濡쒓렇?몄씠 ?꾩슂?⑸땲?? Command Palette?먯꽌 "Jira Agent: 濡쒓렇?????ㅽ뻾?섏꽭??',
+                'Login required. Run "Orx: Login" from the Command Palette.',
             );
             return false;
         }
@@ -243,13 +243,13 @@ export class LicenseManager implements vscode.Disposable {
             }
 
             if (result.remaining !== null && result.remaining <= 0) {
-                const upgrade = '?낃렇?덉씠??;
+                const upgrade = 'Upgrade';
                 const choice = await vscode.window.showWarningMessage(
-                    `?슟 ${feature} ?ъ슜?됱씠 珥덇낵?섏뿀?듬땲?? (${result.used}/${result.limit}) ?뚮옖 ?낃렇?덉씠?쒕? 寃?좏빐 二쇱꽭??`,
+                    `${feature} usage quota exceeded (${result.used}/${result.limit}). Please consider upgrading your plan.`,
                     upgrade,
                 );
                 if (choice === upgrade) {
-                    // ?쇱씠?좎뒪 ?쒕쾭 ??쒕낫?쒕줈 ?덈궡
+                    // Redirect to license server dashboard
                     const config = vscode.workspace.getConfiguration('orx');
                     const serverUrl = config.get<string>('licenseServerUrl', 'http://localhost:3000');
                     vscode.env.openExternal(vscode.Uri.parse(`${serverUrl}/dashboard`));
@@ -259,16 +259,16 @@ export class LicenseManager implements vscode.Disposable {
 
             return true;
         } catch (err) {
-            // ?ㅽ듃?뚰겕 ?먮윭 ???덉슜 (Graceful Degradation)
-            console.warn(`[LicenseManager] ?ъ슜??泥댄겕 ?ㅽ뙣 (${feature}):`, err);
+            // Network error — allow usage (Graceful Degradation)
+            console.warn(`[LicenseManager] Usage check failed (${feature}):`, err);
             return true;
         }
     }
 
-    // ?? Heartbeat (?윟 ?좏깮) ??
+    // ── Heartbeat (Periodic Health Check) ──
 
     /**
-     * Heartbeat ??대㉧ ?쒖옉 (30遺?媛꾧꺽)
+     * Starts the heartbeat timer (30-minute interval).
      */
     private startHeartbeat(): void {
         this.stopHeartbeat();
@@ -284,21 +284,21 @@ export class LicenseManager implements vscode.Disposable {
                 );
 
                 if (!result.valid) {
-                    console.warn('[LicenseManager] Heartbeat: ?쇱씠?좎뒪 臾댄슚?붾맖');
+                    console.warn('[LicenseManager] Heartbeat: license invalidated');
                     await this.logout();
                     vscode.window.showWarningMessage(
-                        '?좑툘 ?쇱씠?좎뒪媛 留뚮즺?섏뿀嫄곕굹 臾댄슚?붾릺?덉뒿?덈떎. ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??',
+                        '⚠️ Your license has expired or been invalidated. Please log in again.',
                     );
                 }
             } catch (err) {
-                console.warn('[LicenseManager] Heartbeat ?ㅽ뙣:', err);
-                // ?ㅽ듃?뚰겕 ?먮윭??臾댁떆 (Graceful Degradation)
+                console.warn('[LicenseManager] Heartbeat failed:', err);
+                // Network error — ignore (Graceful Degradation)
             }
         }, HEARTBEAT_INTERVAL_MS);
     }
 
     /**
-     * Heartbeat ??대㉧ ?뺤?
+     * Stops the heartbeat timer.
      */
     private stopHeartbeat(): void {
         if (this._heartbeatTimer) {
@@ -307,7 +307,7 @@ export class LicenseManager implements vscode.Disposable {
         }
     }
 
-    // ?? Private Helpers ??
+    // ── Private Helpers ──
 
     private setStatus(status: AuthStatus): void {
         this._status = status;
@@ -320,7 +320,7 @@ export class LicenseManager implements vscode.Disposable {
         await this.secrets.delete(SECRET_KEYS.USER_EMAIL);
     }
 
-    // ?? Disposable ??
+    // ── Disposable ──
 
     dispose(): void {
         this.stopHeartbeat();

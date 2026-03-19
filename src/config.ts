@@ -1,9 +1,9 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 
 /**
- * Orx Orchestrator ???ㅼ젙媛??쎄린 紐⑤뱢.
- * VS Code Settings?먯꽌 ?몃옒而??곕룞???꾩슂??媛믪쓣 ?쎌뼱 諛섑솚?쒕떎.
- * Jira ???ν썑 GitHub, Linear ?깆쓽 ?뚮옯???ㅼ젙?????뚯씪?먯꽌 ?뺤옣?쒕떎.
+ * Orx Orchestrator configuration module.
+ * Reads tracker-specific settings from VS Code Settings and returns them.
+ * Currently supports Jira; GitHub/Linear to be added later.
  */
 
 export type TrackerPlatform = 'jira-cloud' | 'jira-server' | 'github' | 'linear';
@@ -14,20 +14,20 @@ export interface TrackerConfig {
     email: string;
     apiToken: string;
     llmApiKey: string;
-    oauthAccessToken?: string; // OAuth ?뚮옯??jira-cloud ?? ?ъ슜 ??
-    /** MISSION-1.5: ?먯껜 ?쒕챸 ?몄쬆??self-signed cert) ?덉슜 ?щ? (jira-server ?섍꼍) */
+    oauthAccessToken?: string; // OAuth platform (jira-cloud) only
+    /** MISSION-1.5: Allow self-signed certificates (jira-server environments) */
     allowSelfSignedCert?: boolean;
 }
 
 /**
- * ?몃옒而??곕룞 ?ㅼ젙媛믪쓣 媛?몄삩??
- * server-token 怨꾩뿴 ?뚮옯??jira-server, github, linear)? domain/apiToken ?꾩닔.
+ * Reads tracker-specific configuration values from VS Code Settings.
+ * For server-token platforms (jira-server, github, linear), domain/apiToken are required.
  */
 export function getTrackerConfig(): TrackerConfig {
     const config = vscode.workspace.getConfiguration('orx');
 
     let domain = config.get<string>('trackerDomain', '').trim();
-    // URL ?뺥깭濡??낅젰?덉쓣 寃쎌슦 ?꾨줈?좎퐳怨??꾪뻾 ?щ옒???쒓굅
+    // Strip protocol prefix and trailing slashes if entered as URL
     domain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
     const email = config.get<string>('email', '').trim();
@@ -37,7 +37,7 @@ export function getTrackerConfig(): TrackerConfig {
 
     if (platform !== 'jira-cloud' && (!domain || !apiToken)) {
         throw new Error(
-            'Orx ?ㅼ젙???꾨즺?섏? ?딆븯?듬땲?? Settings?먯꽌 trackerDomain怨?apiToken???낅젰??二쇱꽭??'
+            'Orx settings are incomplete. Please enter trackerDomain and apiToken in Settings.'
         );
     }
 
@@ -45,8 +45,8 @@ export function getTrackerConfig(): TrackerConfig {
 }
 
 /**
- * ?쇱씠?좎뒪 ?쒕쾭 URL??Settings?먯꽌 媛?몄삩??
- * 湲곕낯媛? http://localhost:3000 (媛쒕컻 ?섍꼍)
+ * Reads the license server URL from Settings.
+ * Default: http://localhost:3000 (development)
  */
 export function getLicenseServerUrl(): string {
     const config = vscode.workspace.getConfiguration('orx');
@@ -56,7 +56,7 @@ export function getLicenseServerUrl(): string {
 }
 
 /**
- * 媛쒕컻 紐⑤뱶 ?щ?. true?대㈃ ?쇱씠?좎뒪 寃利앹쓣 嫄대꼫?대떎.
+ * Returns whether dev mode is enabled. If true, license checks are bypassed.
  */
 export function isDevMode(): boolean {
     const config = vscode.workspace.getConfiguration('orx');
@@ -64,7 +64,7 @@ export function isDevMode(): boolean {
 }
 
 /**
- * ?곌껐???몃옒而??뚮옯?쇱쓣 Settings?먯꽌 媛?몄삩??
+ * Reads the selected tracker platform from Settings.
  */
 export function getPlatform(): TrackerPlatform {
     const config = vscode.workspace.getConfiguration('orx');
@@ -74,9 +74,8 @@ export function getPlatform(): TrackerPlatform {
 }
 
 /**
- * MISSION-1.5: Self-signed ?몄쬆???덉슜 ?щ?.
- * Jira Server/DC ?섍꼍?먯꽌 ?먯껜 ?쒕챸 ?몄쬆?쒕? ?ъ슜?섎뒗 寃쎌슦
- * ?ъ슜?먭? opt-in?쇰줈 ?쒖꽦?뷀븳??
+ * MISSION-1.5: Self-signed certificate opt-in flag.
+ * For Jira Server/DC environments using self-signed certificates.
  */
 export function getAllowSelfSignedCert(): boolean {
     const config = vscode.workspace.getConfiguration('orx');

@@ -1,23 +1,23 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { MemoryManager } from './memory';
 import { getTrackerConfig } from './config';
 import { JiraTrackerAdapter } from './adapters/JiraTrackerAdapter';
 
 /**
- * Chat Participant 紐⑤뱢 (Layer 3 ??蹂대꼫??.
+ * Chat Participant module (Layer 3 — Bonus).
  *
- * `@jira` 硫섏뀡 ??Copilot Chat?먯꽌 吏곸젒 ??붾? 罹≪쿂?섍퀬,
- * Jira ?댁뒋 ?곗씠?곗뿉 湲곕컲???묐떟???쒓났?쒕떎.
+ * Integrates with `@jira` mention in Copilot Chat to
+ * query Jira issue data and produce context-aware responses.
  *
- * ??紐⑤뱢? Copilot???ㅼ튂???섍꼍?먯꽌留??숈옉?섎ŉ,
- * ?놁뼱??L1+L2 異붿쟻? ?뺤긽 ?묐룞?쒕떎.
+ * This module only works in environments where Copilot is available.
+ * Without Copilot, L1+L2 tracking operates normally.
  */
 
 const PARTICIPANT_ID = 'orx.assistant';
 
 /**
- * Chat Participant瑜??깅줉?쒕떎.
- * @returns Disposable (?댁젣 ??李멸????깅줉 ?댁젣)
+ * Registers the Chat Participant.
+ * @returns Disposable (for deregistration on deactivate)
  */
 export function registerChatParticipant(
     memory: MemoryManager
@@ -30,7 +30,7 @@ export function registerChatParticipant(
     ): Promise<void> => {
         const userMessage = request.prompt;
 
-        // 1) ??붾? 硫붾え由ъ뿉 湲곕줉
+        // 1) Record the conversation and generate response
         const assistantResponse = await handleChatRequest(
             userMessage,
             context,
@@ -38,7 +38,7 @@ export function registerChatParticipant(
             token
         );
 
-        // 2) 異붿쟻 ?몄뀡???쒖꽦 ?곹깭?대㈃ 硫붾え由ъ뿉 ???
+        // 2) If a tracking session is active, save to memory
         if (memory.getSession()) {
             await memory.addChatEntry({
                 participant: '@jira',
@@ -49,7 +49,7 @@ export function registerChatParticipant(
         }
     };
 
-    // Chat Participant ?앹꽦 諛??깅줉
+    // Create and register Chat Participant
     const participant = vscode.chat.createChatParticipant(
         PARTICIPANT_ID,
         handler
@@ -60,8 +60,8 @@ export function registerChatParticipant(
 }
 
 /**
- * ?ㅼ젣 梨꾪똿 ?붿껌 泥섎━ 濡쒖쭅.
- * ?ъ슜?먯쓽 吏덉쓽 ?섎룄瑜??뚯븙?섏뿬 ?곸젅???묐떟?쒕떎.
+ * Actual chat request handling logic.
+ * Analyzes user intent and produces context-appropriate responses.
  */
 async function handleChatRequest(
     prompt: string,
@@ -71,7 +71,7 @@ async function handleChatRequest(
 ): Promise<string> {
     const responseParts: string[] = [];
 
-    // /fetch ?щ옒??而ㅻ㎤?? ?댁뒋 ?뺣낫 議고쉶
+    // Check for issue key pattern in the prompt
     const issueKeyMatch = prompt.match(/([A-Z][A-Z0-9_]+-\d+)/i);
 
     if (issueKeyMatch) {
@@ -80,7 +80,7 @@ async function handleChatRequest(
             const config = getTrackerConfig();
             const adapter = new JiraTrackerAdapter(config);
 
-            stream.progress(`${issueKey} ?댁뒋瑜?議고쉶?섍퀬 ?덉뒿?덈떎...`);
+            stream.progress(`Fetching issue ${issueKey}...`);
 
             if (token.isCancellationRequested) {
                 return '';
@@ -91,12 +91,12 @@ async function handleChatRequest(
             const response = [
                 `## ${issue.key}: ${issue.summary}`,
                 '',
-                `**?곹깭**: ${issue.status} | **?좏삎**: ${issue.issueType} | **?곗꽑?쒖쐞**: ${issue.priority}`,
+                `**Status**: ${issue.status} | **Type**: ${issue.issueType} | **Priority**: ${issue.priority}`,
                 '',
-                issue.description ? `### ?ㅻ챸\n${issue.description}` : '',
+                issue.description ? `### Description\n${issue.description}` : '',
                 '',
                 issue.comments.length > 0
-                    ? `### 理쒓렐 肄붾찘??n${issue.comments
+                    ? `### Recent Comments\n${issue.comments
                         .slice(-3)
                         .map(c => `> **${c.author}**: ${c.body}`)
                         .join('\n\n')}`
@@ -108,20 +108,20 @@ async function handleChatRequest(
             stream.markdown(response);
             responseParts.push(response);
         } catch (err: any) {
-            const errMsg = `Jira ?댁뒋 議고쉶 ?ㅽ뙣: ${err.message}`;
+            const errMsg = `Jira issue fetch failed: ${err.message}`;
             stream.markdown(errMsg);
             responseParts.push(errMsg);
         }
     } else {
-        // ?쇰컲 ??? ?덈궡 硫붿떆吏
+        // General help message
         const helpMsg = [
-            '?덈뀞?섏꽭?? **@jira** ?먯씠?꾪듃?낅땲??',
+            'Hello! I\'m the **@jira** assistant.',
             '',
-            '?ъ슜 諛⑸쾿:',
-            '- `@jira PROJ-123` ??Jira ?댁뒋 ?뺣낫 議고쉶',
-            '- `@jira PROJ-123 ???댁뒋??????뚮젮以? ???댁뒋 而⑦뀓?ㅽ듃 湲곕컲 ???,
+            'Usage:',
+            '- `@jira PROJ-123` — Fetch Jira issue details',
+            '- `@jira PROJ-123 <your question>` — Ask about an issue with full context',
             '',
-            '> ?뮕 異붿쟻 紐⑤뱶媛 ?쒖꽦?붾릺???덉쑝硫? ??????댁슜???먮룞?쇰줈 湲곕줉?⑸땲??',
+            '> 💡 If tracking mode is active, all conversations are automatically recorded.',
         ].join('\n');
 
         stream.markdown(helpMsg);

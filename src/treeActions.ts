@@ -1,18 +1,18 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { JiraTreeDataProvider } from './treeView';
 import { JiraTrackerAdapter, JiraFilter } from './adapters/JiraTrackerAdapter';
 import { getTrackerConfig } from './config';
 import { ConnectionManager } from './connectionManager';
 
 /**
- * TreeView ?≪뀡 紐⑤뱢.
+ * TreeView Actions module.
  *
- * ?ъ씠?쒕컮??TreeView ??ぉ???대┃?섍굅???고겢由?븷 ??
- * ?ㅽ뻾?섎뒗 而ㅻ㎤???몃뱾?щ? 紐⑥븘?붾떎.
+ * Registers commands that are triggered when the user clicks
+ * on sidebar TreeView items or context menus.
  */
 
 /**
- * TreeView 愿??而ㅻ㎤?쒕? ?깅줉?섍퀬, Disposable 諛곗뿴??諛섑솚?쒕떎.
+ * Registers TreeView-related commands and returns their Disposable array.
  */
 export function registerTreeActions(
     treeProvider: JiraTreeDataProvider,
@@ -20,9 +20,9 @@ export function registerTreeActions(
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
 
-    // 李멸퀬: refreshTree, searchIssues??activate()?먯꽌 ?대? ?깅줉??
+    // Note: refreshTree, searchIssues are already registered in activate()
 
-    // ?? 釉뚮씪?곗??먯꽌 ?닿린 ??
+    // — Open in Browser —
     disposables.push(
         vscode.commands.registerCommand(
             'orx.openInBrowser',
@@ -35,17 +35,17 @@ export function registerTreeActions(
                     const url = `https://${config.domain}/browse/${issueKey}`;
                     vscode.env.openExternal(vscode.Uri.parse(url));
                 } catch {
-                    vscode.window.showErrorMessage('Jira ?ㅼ젙??癒쇱? ?낅젰??二쇱꽭??');
+                    vscode.window.showErrorMessage('Please complete Jira settings first.');
                 }
             },
         ),
     );
 
-    // ?? JQL 寃????
+    // — JQL Search —
     disposables.push(
         vscode.commands.registerCommand('orx.searchJql', async () => {
             const jql = await vscode.window.showInputBox({
-                prompt: 'JQL 荑쇰━瑜??낅젰?섏꽭??,
+                prompt: 'Enter a JQL query',
                 placeHolder: 'project = PROJ AND status = "In Progress"',
                 ignoreFocusOut: true,
             });
@@ -53,7 +53,7 @@ export function registerTreeActions(
             if (!jql) { return; }
 
             await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'JQL 寃??以?..' },
+                { location: vscode.ProgressLocation.Notification, title: 'Searching JQL...' },
                 async () => {
                     try {
                         const config = getTrackerConfig();
@@ -61,20 +61,20 @@ export function registerTreeActions(
                         const issues = await adapter.searchByJql(jql, 50);
 
                         treeProvider.setSearchResults(
-                            `${jql.substring(0, 40)}${jql.length > 40 ? '...' : ''} ??${issues.length}嫄?,
+                            `${jql.substring(0, 40)}${jql.length > 40 ? '...' : ''} — ${issues.length} results`,
                             issues,
                         );
 
-                        vscode.window.showInformationMessage(`?뵇 寃???꾨즺: ${issues.length}嫄?);
+                        vscode.window.showInformationMessage(`🔍 Search complete: ${issues.length} results`);
                     } catch (err: any) {
-                        vscode.window.showErrorMessage(`JQL 寃???ㅽ뙣: ${err.message}`);
+                        vscode.window.showErrorMessage(`JQL search failed: ${err.message}`);
                     }
                 },
             );
         }),
     );
 
-    // ?? ?꾪꽣 ?ㅽ뻾 ??
+    // — Run Filter —
     disposables.push(
         vscode.commands.registerCommand(
             'orx.runFilter',
@@ -82,7 +82,7 @@ export function registerTreeActions(
                 if (!filter?.jql) { return; }
 
                 await vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Notification, title: `?꾪꽣 ?ㅽ뻾: ${filter.name}` },
+                    { location: vscode.ProgressLocation.Notification, title: `Running filter: ${filter.name}` },
                     async () => {
                         try {
                             const config = getTrackerConfig();
@@ -90,11 +90,11 @@ export function registerTreeActions(
                             const issues = await adapter.searchByJql(filter.jql, 50);
 
                             treeProvider.setSearchResults(
-                                `${filter.name} ??${issues.length}嫄?,
+                                `${filter.name} — ${issues.length} results`,
                                 issues,
                             );
                         } catch (err: any) {
-                            vscode.window.showErrorMessage(`?꾪꽣 ?ㅽ뻾 ?ㅽ뙣: ${err.message}`);
+                            vscode.window.showErrorMessage(`Filter execution failed: ${err.message}`);
                         }
                     },
                 );

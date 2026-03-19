@@ -1,4 +1,4 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { JiraTrackerAdapter, JiraIssueListItem } from './adapters/JiraTrackerAdapter';
 import { getTrackerConfig, getPlatform } from './config';
 import { ConnectionManager } from './connectionManager';
@@ -6,26 +6,26 @@ import { MemoryManager } from './memory';
 import { localize } from './i18n';
 
 /**
- * TreeView ?ъ씠?쒕컮 紐⑤뱢.
+ * TreeView Sidebar module.
  *
- * VS Code Activity Bar??"Jira Agent" ?⑤꼸???깅줉?섍퀬,
- * 濡쒓렇???곹깭, ???댁뒋(?곹깭蹂?洹몃９), ???꾪꽣, JQL 寃??寃곌낵,
- * 異붿쟻 ?몄뀡 ?꾪솴???몃━ 援ъ“濡??쒖떆?쒕떎.
+ * Registered in the VS Code Activity Bar as the "Orx" panel.
+ * Displays login status, My Issues (grouped by status), My Filters,
+ * JQL search results, and tracking sessions in a tree structure.
  */
 
-// ??? TreeItem ????뺤쓽 ???
+// ─── TreeItem Type Definitions ───
 
-/** ?몃━ ?몃뱶???좏삎??援щ텇?섎뒗 contextValue */
+/** contextValue used to distinguish tree node types */
 type TreeNodeType =
-    | 'status'          // 濡쒓렇???곹깭 ?몃뱶
-    | 'platform'        // ?뚮옯???좏깮 ?몃뱶
-    | 'category'        // 移댄뀒怨좊━ ?ㅻ뜑 (???댁뒋, ???꾪꽣 ??
-    | 'statusGroup'     // ?곹깭蹂?洹몃９ (To Do, In Progress, Done)
-    | 'jiraIssue'       // ?댁뒋 ??ぉ
-    | 'jiraFilter'      // ?꾪꽣 ??ぉ
-    | 'action'          // 寃?? ?덈줈怨좎묠 ???≪뀡
-    | 'trackingSession' // 異붿쟻 ?몄뀡
-    | 'info'            // ?뺣낫 ?쒖떆 (?쎄린 ?꾩슜)
+    | 'status'          // Login status node
+    | 'platform'        // Platform selection node
+    | 'category'        // Category header (My Issues, My Filters, etc.)
+    | 'statusGroup'     // Status group (To Do, In Progress, Done)
+    | 'jiraIssue'       // Issue item
+    | 'jiraFilter'      // Filter item
+    | 'action'          // Action node (search, refresh, etc.)
+    | 'trackingSession' // Tracking session
+    | 'info'            // Info display (read-only)
     ;
 
 export class JiraTreeItem extends vscode.TreeItem {
@@ -40,13 +40,13 @@ export class JiraTreeItem extends vscode.TreeItem {
     }
 }
 
-// ??? TreeDataProvider ???
+// ─── TreeDataProvider ───
 
 export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<JiraTreeItem | undefined | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-    /** JQL 寃??寃곌낵瑜??꾩떆 蹂닿? */
+    /** Temporarily stores JQL search results */
     private _searchResults: JiraIssueListItem[] = [];
     private _searchLabel = '';
 
@@ -54,42 +54,42 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         private readonly connectionManager: ConnectionManager,
         private readonly memoryManager: MemoryManager,
     ) {
-        // ?곌껐 ?곹깭 蹂寃????몃━ 媛깆떊
+        // Refresh tree on connection state change
         connectionManager.onDidChangeConnection(() => this.refresh());
     }
 
-    /** ?몃??먯꽌 ?몃━ 媛깆떊???몃━嫄?*/
+    /** Trigger tree refresh from external callers */
     refresh(): void {
         this._onDidChangeTreeData.fire();
     }
 
-    /** JQL 寃??寃곌낵瑜??명똿?섍퀬 ?몃━ 媛깆떊 */
+    /** Set JQL search results and refresh tree */
     setSearchResults(label: string, issues: JiraIssueListItem[]): void {
         this._searchLabel = label;
         this._searchResults = issues;
         this.refresh();
     }
 
-    /** 寃??寃곌낵 珥덇린??*/
+    /** Clear search results */
     clearSearchResults(): void {
         this._searchResults = [];
         this._searchLabel = '';
         this.refresh();
     }
 
-    // ??? TreeDataProvider 援ы쁽 ???
+    // ─── TreeDataProvider Implementation ───
 
     getTreeItem(element: JiraTreeItem): vscode.TreeItem {
         return element;
     }
 
     async getChildren(element?: JiraTreeItem): Promise<JiraTreeItem[]> {
-        // 猷⑦듃 ?덈꺼: 理쒖긽??移댄뀒怨좊━??
+        // Root level: top-level categories
         if (!element) {
             return this.getRootNodes();
         }
 
-        // 移댄뀒怨좊━蹂??섏쐞 ?몃뱶
+        // Category-specific child nodes
         switch (element.meta?.['childType']) {
             case 'myIssues':
                 return this.getMyIssueGroups();
@@ -116,7 +116,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                     );
                     domainNode.command = {
                         command: 'vscode.open',
-                        title: 'Jira ?닿린',
+                        title: 'Open Jira',
                         arguments: [vscode.Uri.parse(`https://${domain}`)],
                     };
                     return [emailNode, domainNode];
@@ -128,7 +128,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 break;
         }
 
-        // ?곹깭 洹몃９ ?섏쐞: ?댁뒋 紐⑸줉
+        // Status group children: issue list
         if (element.nodeType === 'statusGroup' && element.meta?.['issues']) {
             return this.issueListToNodes(element.meta['issues'] as JiraIssueListItem[]);
         }
@@ -136,21 +136,21 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         return [];
     }
 
-    // ??? 猷⑦듃 ?몃뱶 ???
+    // ─── Root Nodes ───
 
     private getRootNodes(): JiraTreeItem[] {
         const nodes: JiraTreeItem[] = [];
 
-        // 1) ?뚮옯???좏깮 (??긽 ?쒖떆)
+        // 1) Platform selection (always visible)
         const platformNode = this.buildPlatformNode();
         nodes.push(platformNode);
 
-        // 2) 濡쒓렇???곹깭
+        // 2) Login status
         const statusNode = this.buildStatusNode();
         nodes.push(statusNode);
 
         if (this.connectionManager.isConnected) {
-            // 3) ???댁뒋
+            // 3) My Issues
             const myIssues = new JiraTreeItem(
                 localize('tree.myIssues'),
                 vscode.TreeItemCollapsibleState.Expanded,
@@ -159,7 +159,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
             );
             nodes.push(myIssues);
 
-            // 4) ???꾪꽣
+            // 4) My Filters
             const myFilters = new JiraTreeItem(
                 localize('tree.myFilters'),
                 vscode.TreeItemCollapsibleState.Collapsed,
@@ -168,7 +168,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
             );
             nodes.push(myFilters);
 
-            // 5) JQL 寃??
+            // 5) JQL Search
             const searchNode = new JiraTreeItem(
                 localize('tree.jqlSearch'),
                 this._searchResults.length > 0
@@ -182,12 +182,12 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 title: localize('tree.jqlSearch'),
             };
             if (this._searchResults.length > 0) {
-                searchNode.description = `${this._searchLabel} (${this._searchResults.length}嫄?`;
+                searchNode.description = `${this._searchLabel} (${this._searchResults.length} results)`;
             }
             nodes.push(searchNode);
         }
 
-        // 6) 異붿쟻 ?몄뀡 (?곌껐 ?щ?? 臾닿??섍쾶 ?쒖떆)
+        // 6) Tracking sessions (visible regardless of connection)
         const sessions = this.memoryManager.getActiveSessions?.() ?? [];
         const currentSession = this.memoryManager.getSession();
         if (currentSession || sessions.length > 0) {
@@ -203,11 +203,11 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         return nodes;
     }
 
-    // ??? 濡쒓렇???곹깭 ?몃뱶 ???
+    // ─── Login Status Node ───
 
     /**
-     * ?꾩옱 ?좏깮???뚮옯?쇱쓣 蹂댁뿬二쇰뒗 ?몃뱶.
-     * ?대┃ ??Quick Pick?쇰줈 ?뚮옯?쇱쓣 蹂寃쏀븷 ???덈떎.
+     * Shows the currently selected tracker platform.
+     * Clicking opens a Quick Pick to change platform.
      */
     private buildPlatformNode(): JiraTreeItem {
         const platformLabels: Record<string, string> = {
@@ -225,7 +225,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
             'platform',
         );
         node.iconPath = new vscode.ThemeIcon('plug');
-        node.tooltip = '?대┃?섏뿬 ?뚮옯?쇱쓣 蹂寃쏀빀?덈떎';
+        node.tooltip = 'Click to change platform';
         node.command = {
             command: 'orx.selectPlatform',
             title: 'Select Platform',
@@ -238,7 +238,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
 
         if (cm.status === 'checking') {
             const node = new JiraTreeItem(
-                '??checking...',
+                '⏳ checking...',
                 vscode.TreeItemCollapsibleState.None,
                 'status',
             );
@@ -249,7 +249,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         if (cm.isConnected && cm.currentUser) {
             const user = cm.currentUser;
             const node = new JiraTreeItem(
-                `?뫀 ${user.displayName}`,
+                `👤 ${user.displayName}`,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'status',
                 { childType: 'statusDetail' },
@@ -260,14 +260,14 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
             return node;
         }
 
-        // 誘몄뿰寃???濡쒓렇???좊룄
+        // Not connected — prompt login
         const node = new JiraTreeItem(
             localize('tree.login.action'),
             vscode.TreeItemCollapsibleState.None,
             'status',
         );
         node.description = localize('tree.status.loggedOut');
-        node.tooltip = '?대┃?섏뿬 濡쒓렇?명빀?덈떎';
+        node.tooltip = 'Click to sign in';
         node.iconPath = new vscode.ThemeIcon('sign-in');
         node.command = {
             command: 'orx.login',
@@ -276,7 +276,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         return node;
     }
 
-    // ??? ???댁뒋 (?곹깭蹂?洹몃９) ???
+    // ─── My Issues (Status Groups) ───
 
     private async getMyIssueGroups(): Promise<JiraTreeItem[]> {
         try {
@@ -287,13 +287,13 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 50,
             );
 
-            // 理쒓렐 ?꾨즺???댁뒋???쒖떆 (7???대궡)
+            // Recent done issues (last 7 days)
             const doneIssues = await adapter.searchByJql(
                 'assignee = currentUser() AND statusCategory = "Done" AND updated >= -7d ORDER BY updated DESC',
                 10,
             );
 
-            // statusCategory蹂?洹몃９??
+            // Group by statusCategory
             const groups = new Map<string, JiraIssueListItem[]>();
             for (const issue of issues) {
                 const cat = issue.statusCategory || 'Unknown';
@@ -301,19 +301,19 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 groups.get(cat)!.push(issue);
             }
             if (doneIssues.length > 0) {
-                groups.set('Done (理쒓렐 7??', doneIssues);
+                groups.set('Done (Last 7 days)', doneIssues);
             }
 
-            // ?곹깭 移댄뀒怨좊━ ?꾩씠肄?留ㅽ븨
+            // Status category icon mapping
             const iconMap: Record<string, string> = {
-                'To Do': '燧?,
-                'In Progress': '?윞',
-                'Done (理쒓렐 7??': '??,
+                'To Do': '⚪',
+                'In Progress': '🔵',
+                'Done (Last 7 days)': '✅',
             };
 
             const nodes: JiraTreeItem[] = [];
             for (const [category, categoryIssues] of groups) {
-                const icon = iconMap[category] ?? '?뱦';
+                const icon = iconMap[category] ?? '📌';
                 const node = new JiraTreeItem(
                     `${icon} ${category} (${categoryIssues.length})`,
                     vscode.TreeItemCollapsibleState.Expanded,
@@ -325,7 +325,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
             return nodes;
         } catch (err: any) {
             const errNode = new JiraTreeItem(
-                `?좑툘 ?댁뒋 議고쉶 ?ㅽ뙣: ${err.message}`,
+                `⚠️ Issue fetch failed: ${err.message}`,
                 vscode.TreeItemCollapsibleState.None,
                 'status',
             );
@@ -333,7 +333,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         }
     }
 
-    // ??? ???꾪꽣 ???
+    // ─── My Filters ───
 
     private async getMyFilters(): Promise<JiraTreeItem[]> {
         try {
@@ -343,7 +343,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
 
             if (filters.length === 0) {
                 return [new JiraTreeItem(
-                    '利먭꺼李얘린 ?꾪꽣媛 ?놁뒿?덈떎',
+                    'No favourite filters found',
                     vscode.TreeItemCollapsibleState.None,
                     'status',
                 )];
@@ -361,26 +361,26 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 node.iconPath = new vscode.ThemeIcon('filter');
                 node.command = {
                     command: 'orx.runFilter',
-                    title: '?꾪꽣 ?ㅽ뻾',
+                    title: 'Run Filter',
                     arguments: [f],
                 };
                 return node;
             });
         } catch (err: any) {
             return [new JiraTreeItem(
-                `?좑툘 ?꾪꽣 議고쉶 ?ㅽ뙣: ${err.message}`,
+                `⚠️ Filter fetch failed: ${err.message}`,
                 vscode.TreeItemCollapsibleState.None,
                 'status',
             )];
         }
     }
 
-    // ??? 寃??寃곌낵 ???
+    // ─── Search Results ───
 
     private getSearchResultNodes(): JiraTreeItem[] {
         if (this._searchResults.length === 0) {
             return [new JiraTreeItem(
-                '寃??寃곌낵媛 ?놁뒿?덈떎',
+                'No search results',
                 vscode.TreeItemCollapsibleState.None,
                 'status',
             )];
@@ -388,7 +388,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         return this.issueListToNodes(this._searchResults);
     }
 
-    // ??? 異붿쟻 ?몄뀡 ???
+    // ─── Tracking Sessions ───
 
     private getTrackingSessionNodes(): JiraTreeItem[] {
         const session = this.memoryManager.getSession();
@@ -408,7 +408,7 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
         return [node];
     }
 
-    // ??? ?댁뒋 ??TreeItem 蹂?????
+    // ─── Issue → TreeItem Conversion ───
 
     private issueListToNodes(issues: JiraIssueListItem[]): JiraTreeItem[] {
         return issues.map((issue) => {
@@ -420,11 +420,11 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
                 { issueKey: issue.key },
             );
             node.description = issue.summary;
-            node.tooltip = `${issue.key}: ${issue.summary}\n?곹깭: ${issue.status}\n?곗꽑?쒖쐞: ${issue.priority}\n?대떦?? ${issue.assignee ?? '誘몃같??}`;
+            node.tooltip = `${issue.key}: ${issue.summary}\nStatus: ${issue.status}\nPriority: ${issue.priority}\nAssignee: ${issue.assignee ?? 'Unassigned'}`;
             node.iconPath = new vscode.ThemeIcon('issues');
             node.command = {
                 command: 'orx.fetchIssue',
-                title: '?댁뒋 議고쉶',
+                title: 'View Issue',
                 arguments: [issue.key],
             };
             return node;
@@ -433,12 +433,12 @@ export class JiraTreeDataProvider implements vscode.TreeDataProvider<JiraTreeIte
 
     private getPriorityIcon(priority: string): string {
         switch (priority.toLowerCase()) {
-            case 'highest': case 'blocker': return '?뵶';
-            case 'high': case 'critical': return '?윝';
-            case 'medium': return '?윞';
-            case 'low': return '?윟';
-            case 'lowest': return '??;
-            default: return '??;
+            case 'highest': case 'blocker': return '🔴';
+            case 'high': case 'critical': return '🟠';
+            case 'medium': return '🟡';
+            case 'low': return '🟢';
+            case 'lowest': return '⚪';
+            default: return '⚪';
         }
     }
 }

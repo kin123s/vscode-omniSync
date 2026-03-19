@@ -1,17 +1,17 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { JiraTrackerAdapter, JiraIssueData } from './adapters/JiraTrackerAdapter';
 import { TrackerConfig } from './config';
 import { MemoryManager } from './memory';
 
 /**
- * ?댁뒋 ??쒕낫??Webview ?⑤꼸.
+ * Issue Dashboard Webview Panel.
  *
- * - ?몄뒪?댁뒪瑜??댁뒋 ?ㅻ퀎濡?罹먯떛?섏뿬 以묐났 ?⑤꼸 ?앹꽦 諛⑹?
- * - ?붿빟(AI Summary)? workspaceState??罹먯떛?섏뿬 ?ъ삤????利됱떆 蹂듭썝
- * - Extension ??Webview 硫붿떆吏濡?踰꾪듉 ?≪뀡(異붿쟻 ?쒖옉/醫낅즺, ?덈줈怨좎묠) 泥섎━
+ * - Caches panel instances by issue key to prevent duplicate panels
+ * - Caches AI summaries in workspaceState for instant restore
+ * - Handles button actions (start/stop tracking, refresh) via Webview messages
  */
 export class DashboardPanel {
-    // ?⑤꼸 ?몄뒪?댁뒪 罹먯떆 (issueKey ??panel)
+    // Panel instance cache (issueKey → panel)
     private static readonly _panels = new Map<string, DashboardPanel>();
 
     private readonly _panel: vscode.WebviewPanel;
@@ -19,7 +19,7 @@ export class DashboardPanel {
     private _issueData: JiraIssueData | null = null;
     private _disposables: vscode.Disposable[] = [];
 
-    // ?? ?앹꽦??(private) ??
+    // ── Constructor (private) ──
 
     private constructor(
         private readonly _context: vscode.ExtensionContext,
@@ -40,7 +40,7 @@ export class DashboardPanel {
             },
         );
 
-        // ?⑤꼸???ロ옄 ??罹먯떆?먯꽌 ?쒓굅
+        // Remove from cache on close
         this._panel.onDidDispose(
             () => {
                 DashboardPanel._panels.delete(issueKey);
@@ -50,22 +50,22 @@ export class DashboardPanel {
             this._disposables,
         );
 
-        // Webview ??Extension 硫붿떆吏 泥섎━
+        // Handle Webview → Extension messages
         this._panel.webview.onDidReceiveMessage(
             (message: WebviewMessage) => this._handleMessage(message),
             null,
             this._disposables,
         );
 
-        // 濡쒕뵫 ?곹깭濡?珥덇린 ?뚮뜑留?
+        // Initial render with loading state
         this._render(null, true);
     }
 
-    // ?? Public API ??
+    // ── Public API ──
 
     /**
-     * ??쒕낫???⑤꼸???앹꽦?섍굅??湲곗〈 ?⑤꼸???쒖꽦?뷀븳??
-     * ?댁뒋 ?곗씠?곕? 鍮꾨룞湲곕줈 濡쒕뱶 ???뚮뜑留곹븳??
+     * Creates a new dashboard panel or reveals an existing one.
+     * Loads issue data asynchronously and renders.
      */
     static async createOrShow(
         context: vscode.ExtensionContext,
@@ -75,24 +75,24 @@ export class DashboardPanel {
     ): Promise<void> {
         const normalized = issueKey.trim().toUpperCase();
 
-        // 湲곗〈 ?⑤꼸???덉쑝硫??ъ빱?ㅻ쭔 ?대룞
+        // Reveal existing panel if available
         const existing = DashboardPanel._panels.get(normalized);
         if (existing) {
             existing._panel.reveal(vscode.ViewColumn.One);
             return;
         }
 
-        // ?좉퇋 ?⑤꼸 ?앹꽦
+        // Create new panel
         const dashboard = new DashboardPanel(context, config, memoryManager, normalized);
         DashboardPanel._panels.set(normalized, dashboard);
 
-        // ?댁뒋 ?곗씠??濡쒕뱶
+        // Load issue data
         await dashboard._loadIssue();
     }
 
-    // ?? Private Methods ??
+    // ── Private Methods ──
 
-    /** Jira?먯꽌 ?댁뒋 ?곗씠?곕? 媛?몄? ?뚮뜑留곹븳??*/
+    /** Fetches issue data from Jira and renders */
     private async _loadIssue(): Promise<void> {
         try {
             const adapter = new JiraTrackerAdapter(this._config);
@@ -103,7 +103,7 @@ export class DashboardPanel {
         }
     }
 
-    /** Webview?먯꽌 ??硫붿떆吏瑜?泥섎━?쒕떎 */
+    /** Handles incoming Webview messages */
     private async _handleMessage(message: WebviewMessage): Promise<void> {
         switch (message.command) {
             case 'refresh':
@@ -140,7 +140,7 @@ export class DashboardPanel {
         }
     }
 
-    /** 異붿쟻 ?곹깭瑜?媛깆떊?섏뿬 Webview??蹂대궦??*/
+    /** Refreshes tracking state and sends update to Webview */
     private _refreshTrackingState(): void {
         const session = this._memoryManager.getSession();
         const isTracking = session?.issueKey === this._issueKey;
@@ -154,12 +154,12 @@ export class DashboardPanel {
         });
     }
 
-    /** ??쒕낫??HTML???뚮뜑留곹븳??*/
+    /** Renders the dashboard HTML */
     private _render(data: JiraIssueData | null, loading: boolean): void {
         this._panel.webview.html = this._buildHtml(data, loading);
     }
 
-    /** ?먮윭 ?곹깭瑜??뚮뜑留곹븳??*/
+    /** Renders error state */
     private _renderError(message: string): void {
         this._panel.webview.html = this._buildErrorHtml(message);
     }
@@ -169,7 +169,7 @@ export class DashboardPanel {
         this._disposables = [];
     }
 
-    // ?? HTML 鍮뚮뜑 ??
+    // ── HTML Builder ──
 
     private _buildHtml(data: JiraIssueData | null, loading: boolean): string {
         const nonce = this._getNonce();
@@ -350,7 +350,7 @@ export class DashboardPanel {
 </style>
 </head>
 <body>
-${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 以?..</div>` : this._buildBody(data, isTracking, stats, priorityIcon, cachedSummary)}
+${loading ? `<div class="loading"><div class="spinner"></div> Loading issue...</div>` : this._buildBody(data, isTracking, stats, priorityIcon, cachedSummary)}
 
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -359,7 +359,7 @@ ${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 
     vscode.postMessage({ command, ...extra });
   }
 
-  // Extension?먯꽌 ?ㅻ뒗 硫붿떆吏 泥섎━
+  // Handle messages from Extension Host
   window.addEventListener('message', (event) => {
     const msg = event.data;
     if (msg.command === 'updateTracking') {
@@ -368,14 +368,14 @@ ${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 
       if (badge) {
         badge.className = 'tracking-badge ' + (msg.isTracking ? 'active' : 'inactive');
         badge.innerHTML = msg.isTracking
-          ? '?뵶 異붿쟻 以?(Tracking Active)'
-          : '??異붿쟻 ????;
+          ? '🔴 Tracking Active'
+          : '⚫ Not Tracking';
       }
       if (statsDiv) {
         statsDiv.innerHTML = msg.isTracking
           ? \`<div class="stats-row">
-              <div><div class="stat">\${msg.fileCount}</div><div class="stat-label">?뚯씪 蹂寃?/div></div>
-              <div><div class="stat">\${msg.terminalCount}</div><div class="stat-label">?곕????ㅽ뻾</div></div>
+              <div><div class="stat">\${msg.fileCount}</div><div class="stat-label">File Changes</div></div>
+              <div><div class="stat">\${msg.terminalCount}</div><div class="stat-label">Terminal Runs</div></div>
             </div>\`
           : '';
       }
@@ -394,12 +394,12 @@ ${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 
         cachedSummary: string,
     ): string {
         if (!data) {
-            return `<div class="loading">?댁뒋 ?곗씠?곕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??</div>`;
+            return `<div class="loading">Could not load issue data.</div>`;
         }
 
         const description = data.description
-            ? this._escapeHtml(data.description.slice(0, 2000)) + (data.description.length > 2000 ? '\n...(?댄븯 ?앸왂)' : '')
-            : '(?ㅻ챸 ?놁쓬)';
+            ? this._escapeHtml(data.description.slice(0, 2000)) + (data.description.length > 2000 ? '\n...(truncated)' : '')
+            : '(No description)';
 
         const commentsHtml = data.comments.slice(0, 5).map(c => `
           <div class="comment">
@@ -418,65 +418,65 @@ ${loading ? `<div class="loading"><div class="spinner"></div> ?댁뒋 濡쒕뵫 
 </div>
 
 <div class="actions">
-  <button class="btn-primary" onclick="send('refresh')">?봽 ?덈줈怨좎묠</button>
+  <button class="btn-primary" onclick="send('refresh')">🔄 Refresh</button>
   ${isTracking
-    ? `<button class="btn-danger" onclick="send('stopTracking')">?뱄툘 異붿쟻 醫낅즺 & 由ы룷??/button>`
-    : `<button class="btn-secondary" onclick="send('startTracking')">?띰툘 異붿쟻 ?쒖옉</button>`}
-  <button class="btn-secondary" onclick="send('generatePlan')">?뱥 ?묒뾽 怨꾪쉷??/button>
-  <button class="btn-secondary" onclick="send('openJira')">?뵕 Jira?먯꽌 ?닿린</button>
+    ? `<button class="btn-danger" onclick="send('stopTracking')">⏹️ Stop Tracking & Report</button>`
+    : `<button class="btn-secondary" onclick="send('startTracking')">🔴 Start Tracking</button>`}
+  <button class="btn-secondary" onclick="send('generatePlan')">📋 Work Plan</button>
+  <button class="btn-secondary" onclick="send('openJira')">🔗 Open in Jira</button>
 </div>
 
 <div class="grid">
   <div class="card">
-    <div class="card-title">硫뷀??곗씠??/div>
-    <div class="meta-row"><span class="meta-label">?좏삎</span><span class="meta-value">${this._escapeHtml(data.issueType)}</span></div>
-    <div class="meta-row"><span class="meta-label">?곗꽑?쒖쐞</span><span class="meta-value">${priorityIcon} ${this._escapeHtml(data.priority)}</span></div>
-    <div class="meta-row"><span class="meta-label">?대떦??/span><span class="meta-value">${this._escapeHtml(data.assignee ?? '誘몄???)}</span></div>
-    <div class="meta-row"><span class="meta-label">蹂닿퀬??/span><span class="meta-value">${this._escapeHtml(data.reporter ?? '-')}</span></div>
-    ${data.labels.length > 0 ? `<div class="meta-row"><span class="meta-label">?덉씠釉?/span><span class="meta-value">${data.labels.map(l => this._escapeHtml(l)).join(', ')}</span></div>` : ''}
-    ${data.components?.length ? `<div class="meta-row"><span class="meta-label">而댄룷?뚰듃</span><span class="meta-value">${data.components.map(c => this._escapeHtml(c)).join(', ')}</span></div>` : ''}
+    <div class="card-title">Metadata</div>
+    <div class="meta-row"><span class="meta-label">Type</span><span class="meta-value">${this._escapeHtml(data.issueType)}</span></div>
+    <div class="meta-row"><span class="meta-label">Priority</span><span class="meta-value">${priorityIcon} ${this._escapeHtml(data.priority)}</span></div>
+    <div class="meta-row"><span class="meta-label">Assignee</span><span class="meta-value">${this._escapeHtml(data.assignee ?? 'Unassigned')}</span></div>
+    <div class="meta-row"><span class="meta-label">Reporter</span><span class="meta-value">${this._escapeHtml(data.reporter ?? '-')}</span></div>
+    ${data.labels.length > 0 ? `<div class="meta-row"><span class="meta-label">Labels</span><span class="meta-value">${data.labels.map(l => this._escapeHtml(l)).join(', ')}</span></div>` : ''}
+    ${data.components?.length ? `<div class="meta-row"><span class="meta-label">Components</span><span class="meta-value">${data.components.map(c => this._escapeHtml(c)).join(', ')}</span></div>` : ''}
     ${data.fixVersions?.length ? `<div class="meta-row"><span class="meta-label">Fix Version</span><span class="meta-value">${data.fixVersions.map(v => this._escapeHtml(v)).join(', ')}</span></div>` : ''}
-    ${data.sprint ? `<div class="meta-row"><span class="meta-label">?ㅽ봽由고듃</span><span class="meta-value">${this._escapeHtml(data.sprint)}</span></div>` : ''}
+    ${data.sprint ? `<div class="meta-row"><span class="meta-label">Sprint</span><span class="meta-value">${this._escapeHtml(data.sprint)}</span></div>` : ''}
   </div>
 
   <div class="card">
-    <div class="card-title">?묒뾽 異붿쟻</div>
+    <div class="card-title">Work Tracking</div>
     <div id="tracking-badge" class="tracking-badge ${isTracking ? 'active' : 'inactive'}">
-      ${isTracking ? '?뵶 異붿쟻 以?(Tracking Active)' : '??異붿쟻 ????}
+      ${isTracking ? '🔴 Tracking Active' : '⚫ Not Tracking'}
     </div>
     <div id="tracking-stats">
       ${isTracking ? `
       <div class="stats-row">
-        <div><div class="stat">${stats?.files ?? 0}</div><div class="stat-label">?뚯씪 蹂寃?/div></div>
-        <div><div class="stat">${stats?.terminal ?? 0}</div><div class="stat-label">?곕????ㅽ뻾</div></div>
-        <div><div class="stat">${stats?.chats ?? 0}</div><div class="stat-label">AI ???/div></div>
+        <div><div class="stat">${stats?.files ?? 0}</div><div class="stat-label">File Changes</div></div>
+        <div><div class="stat">${stats?.terminal ?? 0}</div><div class="stat-label">Terminal Runs</div></div>
+        <div><div class="stat">${stats?.chats ?? 0}</div><div class="stat-label">AI Chats</div></div>
       </div>` : ''}
     </div>
   </div>
 
   ${data.epic ? `
   <div class="card">
-    <div class="card-title">?먰뵿</div>
-    <div class="meta-row"><span class="meta-label">??/span><span class="meta-value">${this._escapeHtml(data.epic.key)}</span></div>
-    <div class="meta-row"><span class="meta-label">?붿빟</span><span class="meta-value">${this._escapeHtml(data.epic.summary)}</span></div>
+    <div class="card-title">Epic</div>
+    <div class="meta-row"><span class="meta-label">Key</span><span class="meta-value">${this._escapeHtml(data.epic.key)}</span></div>
+    <div class="meta-row"><span class="meta-label">Summary</span><span class="meta-value">${this._escapeHtml(data.epic.summary)}</span></div>
   </div>` : ''}
 </div>
 
 ${cachedSummary ? `
-<div class="section-title">?쨼 AI ?붿빟 (罹먯떆)</div>
+<div class="section-title">🤖 AI Summary (cached)</div>
 <div class="description">${this._escapeHtml(cachedSummary)}</div>
 ` : ''}
 
-<div class="section-title">?뱷 ?ㅻ챸</div>
+<div class="section-title">📝 Description</div>
 <div class="description">${description}</div>
 
 ${data.comments.length > 0 ? `
-<div class="section-title">?뮠 理쒓렐 ?볤? (${data.comments.length}嫄?</div>
+<div class="section-title">💬 Recent Comments (${data.comments.length})</div>
 ${commentsHtml}
 ` : ''}
 
 ${data.linkedIssues.length > 0 ? `
-<div class="section-title">?뵕 ?곌? ?댁뒋 (${data.linkedIssues.length}嫄?</div>
+<div class="section-title">🔗 Linked Issues (${data.linkedIssues.length})</div>
 ${data.linkedIssues.slice(0, 5).map(li => `
 <div class="comment">
   <div class="comment-author">${this._escapeHtml(li.linkType)}: ${this._escapeHtml(li.key)}</div>
@@ -485,7 +485,7 @@ ${data.linkedIssues.slice(0, 5).map(li => `
 ` : ''}
 
 ${data.subtasks.length > 0 ? `
-<div class="section-title">?뱦 ?섏쐞 ?댁뒋 (${data.subtasks.length}嫄?</div>
+<div class="section-title">📌 Subtasks (${data.subtasks.length})</div>
 ${data.subtasks.map(st => `
 <div class="comment">
   <div class="comment-author">${this._escapeHtml(st.key)} <span class="comment-date">${this._escapeHtml(st.status)}</span></div>
@@ -507,10 +507,10 @@ ${data.subtasks.map(st => `
   button { margin-top: 16px; padding: 6px 14px; cursor: pointer; }
 </style>
 </head><body>
-<h2 class="error">?좑툘 ?댁뒋 濡쒕뱶 ?ㅽ뙣</h2>
+<h2 class="error">⚠️ Issue Load Failed</h2>
 <p class="error-msg">${this._escapeHtml(message)}</p>
 <script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>
-<button onclick="vscode.postMessage({command:'refresh'})">?ㅼ떆 ?쒕룄</button>
+<button onclick="vscode.postMessage({command:'refresh'})">Retry</button>
 </body></html>`;
     }
 
@@ -533,25 +533,25 @@ ${data.subtasks.map(st => `
 
     private _getStatusColor(status: string): string {
         const s = status.toLowerCase();
-        if (s.includes('done') || s.includes('?꾨즺')) { return '#28a745'; }
-        if (s.includes('progress') || s.includes('吏꾪뻾')) { return '#007bff'; }
-        if (s.includes('review') || s.includes('寃??)) { return '#fd7e14'; }
-        if (s.includes('block') || s.includes('李⑤떒')) { return '#dc3545'; }
+        if (s.includes('done') || s.includes('complete')) { return '#28a745'; }
+        if (s.includes('progress')) { return '#007bff'; }
+        if (s.includes('review')) { return '#fd7e14'; }
+        if (s.includes('block')) { return '#dc3545'; }
         return '#6c757d';
     }
 
     private _getPriorityIcon(priority: string): string {
         const p = priority.toLowerCase();
-        if (p === 'highest' || p === 'critical') { return '?뵶'; }
-        if (p === 'high') { return '?윝'; }
-        if (p === 'medium') { return '?윞'; }
-        if (p === 'low') { return '?윟'; }
-        if (p === 'lowest') { return '??; }
-        return '燧?;
+        if (p === 'highest' || p === 'critical') { return '🔴'; }
+        if (p === 'high') { return '🟠'; }
+        if (p === 'medium') { return '🟡'; }
+        if (p === 'low') { return '🟢'; }
+        if (p === 'lowest') { return '⚪'; }
+        return '⚪';
     }
 }
 
-// ?? 硫붿떆吏 ?????
+// ── Message Types ──
 
 interface WebviewMessage {
     command: 'refresh' | 'startTracking' | 'stopTracking' | 'openJira' | 'generatePlan';

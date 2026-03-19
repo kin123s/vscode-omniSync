@@ -1,4 +1,4 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import type {
@@ -7,11 +7,12 @@ import type {
 } from './webviewProtocol';
 
 /**
- * Orx 由ы룷??由щ럭??Webview ?⑤꼸.
+ * Orx Report Review Webview Panel.
  *
- * React SPA(dist/webview/)瑜?濡쒕뱶?섏뿬 ?몄닔?멸퀎??由ы룷?몃? ?명꽣?숉떚釉뚰븯寃? * ?뚮뜑留겶룹닔?빧룸씪?고똿?????덈뒗 ?꾩슜 ?⑤꼸.
+ * Loads the React SPA (dist/webview/) and displays interactive
+ * report editing/export UI.
  *
- * ?깃????⑦꽩 ???숈떆???섎굹??由ы룷???⑤꼸留?議댁옱.
+ * Singleton: only one report panel exists at a time.
  */
 export class ReportPanel {
   private static _instance: ReportPanel | undefined;
@@ -19,10 +20,10 @@ export class ReportPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
 
-  /** ?꾩옱 ?쒖떆 以묒씤 由ы룷??留덊겕?ㅼ슫 (?먮뵒?곗뿉???섏젙 ???낅뜲?댄듃) */
+  /** Currently displayed report markdown (updated by edits in the UI) */
   private _currentMarkdown: string = '';
 
-  /** ?몃? ?몃뱾?????≪뀡 硫붿떆吏瑜?泥섎━??肄쒕갚 */
+  /** Callback to handle action messages from the Webview */
   private _onAction?: (msg: WebviewToExtMessage) => Promise<void>;
 
   private constructor(
@@ -34,7 +35,7 @@ export class ReportPanel {
 
     this._panel = vscode.window.createWebviewPanel(
       'orx.reportReview',
-      'Orx ??Report',
+      'Orx — Report',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -47,14 +48,14 @@ export class ReportPanel {
 
     this._panel.iconPath = new vscode.ThemeIcon('file-text');
 
-    // Webview ??Extension 硫붿떆吏 ?섏떊
+    // Webview → Extension Host messaging
     this._panel.webview.onDidReceiveMessage(
       (msg: WebviewToExtMessage) => this._handleWebviewMessage(msg),
       null,
       this._disposables,
     );
 
-    // ?⑤꼸 ?ロ옒 泥섎━
+    // Panel close handler
     this._panel.onDidDispose(
       () => {
         ReportPanel._instance = undefined;
@@ -64,14 +65,14 @@ export class ReportPanel {
       this._disposables,
     );
 
-    // React SPA HTML 濡쒕뱶
+    // Load React SPA HTML
     this._panel.webview.html = this._getWebviewContent();
   }
 
-  // ??? ?쇰툝由?API ???
+  // ── Public API ──
 
   /**
-   * ?⑤꼸???닿퀬 由ы룷???곗씠?곕? ?꾨떖?쒕떎.
+   * Opens the panel and delivers report data.
    */
   static createOrShow(
     extensionUri: vscode.Uri,
@@ -87,7 +88,7 @@ export class ReportPanel {
   }
 
   /**
-   * Extension Host ??Webview濡?由ы룷???곗씠?곕? ?꾩넚?쒕떎.
+   * Sends report data from Extension Host to Webview.
    */
   sendReport(data: {
     markdown: string;
@@ -108,7 +109,7 @@ export class ReportPanel {
   }
 
   /**
-   * ?곹깭 ?낅뜲?댄듃瑜?Webview???꾩넚?쒕떎.
+   * Sends a status update to the Webview.
    */
   sendStatus(status: 'loading' | 'ready' | 'error', message?: string): void {
     this._postMessageToWebview({
@@ -118,7 +119,7 @@ export class ReportPanel {
   }
 
   /**
-   * ?꾩옱 由ы룷??留덊겕?ㅼ슫??諛섑솚 (?먮뵒?곗뿉???섏젙??理쒖떊 踰꾩쟾).
+   * Returns the current report markdown (may be edited in Webview).
    */
   getCurrentMarkdown(): string {
     return this._currentMarkdown;
@@ -129,29 +130,29 @@ export class ReportPanel {
     ReportPanel._instance = undefined;
   }
 
-  // ??? ?대? 硫붿꽌?????
+  // ── Internal Methods ──
 
   private _postMessageToWebview(message: ExtToWebviewMessage): void {
     this._panel.webview.postMessage(message);
   }
 
   /**
-   * Webview?먯꽌 ?섏떊???≪뀡 硫붿떆吏瑜?泥섎━?쒕떎.
+   * Handles action messages received from the Webview.
    */
   private async _handleWebviewMessage(msg: WebviewToExtMessage): Promise<void> {
-    // ?먮뵒?곗뿉???섏젙??由ы룷???낅뜲?댄듃
+    // Update cached markdown on edits from the Webview
     if (msg.type === 'action:editReport') {
       this._currentMarkdown = msg.payload.markdown;
     }
 
-    // ?깅줉???몃? ?몃뱾?ъ뿉 ?꾩엫
+    // Delegate to the registered action handler
     if (this._onAction) {
       await this._onAction(msg);
     }
   }
 
   /**
-   * React SPA 踰덈뱾??濡쒕뱶?섎뒗 HTML???앹꽦?쒕떎.
+   * Generates the HTML that loads the React SPA bundle.
    */
   private _getWebviewContent(): string {
     const webviewDistPath = path.join(
@@ -160,35 +161,36 @@ export class ReportPanel {
       'webview',
     );
 
-    // Vite 鍮뚮뱶 寃곌낵臾쇱씤 index.html???쎌뼱?⑤떎
+    // Read the Vite build output index.html
     const indexHtmlPath = path.join(webviewDistPath, 'index.html');
 
-    // index.html??議댁옱?섎㈃ 洹??덉쓽 寃쎈줈瑜?Webview URI濡?蹂??    if (fs.existsSync(indexHtmlPath)) {
+    if (fs.existsSync(indexHtmlPath)) {
       let html = fs.readFileSync(indexHtmlPath, 'utf-8');
 
-      // ?뺤쟻 ?먯썝 寃쎈줈瑜?Webview URI濡?蹂??      const webviewUri = this._panel.webview.asWebviewUri(
+      // Convert static asset paths to Webview URIs
+      const webviewUri = this._panel.webview.asWebviewUri(
         vscode.Uri.file(webviewDistPath),
       );
 
-      // ?곷? 寃쎈줈(./)瑜?Webview URI濡?移섑솚
+      // Replace relative paths (./) with Webview URIs
       html = html.replace(/(href|src)="\.\/([^"]+)"/g, `$1="${webviewUri}/$2"`);
 
-      // CSP 硫뷀? ?쒓렇 二쇱엯 (湲곗〈 寃껋씠 ?놁쑝硫?異붽?)
+      // Inject CSP meta tag if not present
       const nonce = getNonce();
       if (!html.includes('Content-Security-Policy')) {
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${this._panel.webview.cspSource}; font-src ${this._panel.webview.cspSource};">`;
         html = html.replace('<head>', `<head>\n    ${cspMeta}`);
       }
 
-      // script ?쒓렇??nonce 異붽?
+      // Add nonce to script tags
       html = html.replace(/<script /g, `<script nonce="${nonce}" `);
 
       return html;
     }
 
-    // 鍮뚮뱶 ?????곹깭 (媛쒕컻 珥덇린) ???덈궡 硫붿떆吏
+    // Fallback: Webview UI not built yet (development initial state)
     return `<!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -210,8 +212,8 @@ export class ReportPanel {
 </head>
 <body>
   <div class="message">
-    <h2>?숋툘 Webview UI 鍮뚮뱶媛 ?꾩슂?⑸땲??/h2>
-    <p>?ㅼ쓬 紐낅졊?대? ?ㅽ뻾?섏꽭??</p>
+    <h2>Webview UI build required</h2>
+    <p>Run the following command:</p>
     <p><code>cd webview-ui && pnpm install && pnpm run build</code></p>
   </div>
 </body>

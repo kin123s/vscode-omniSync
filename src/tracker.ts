@@ -1,12 +1,12 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { MemoryManager, FileChangeEntry, TerminalEntry } from './memory';
 
 /**
- * Tracker 筌뤴뫀諭?
+ * Tracker module.
  *
- * AI ?袁㏓럡 ??쑴?썼??곸읅(tool-agnostic) ?臾믩씜 ?곕뗄?삥묾?
- * Layer 1 (???뵬 癰궰野? + Layer 2 (?怨???筌뤿굝議??????쇰뻻揶?揶쏅Ŋ???뤿연
- * MemoryManager??疫꿸퀡以??뺣뼄.
+ * Tool-agnostic work tracking engine that collects development activities.
+ * Layer 1 (File change tracking) + Layer 2 (Terminal command tracking)
+ * are recorded via MemoryManager.
  */
 export class Tracker {
     private disposables: vscode.Disposable[] = [];
@@ -15,7 +15,7 @@ export class Tracker {
     private gitBaseRef: string | null = null;
 
     constructor(private readonly memory: MemoryManager) {
-        // ?怨밴묶獄??袁⑹뵠????밴쉐 (?곕뗄???怨밴묶 ??뽯뻻)
+        // Status bar item for tracking state (always created, initially hidden)
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Left,
             100
@@ -24,26 +24,26 @@ export class Tracker {
         this.updateStatusBar();
     }
 
-    /** ?곕뗄?????뽮쉐???怨밴묶?紐? ??? */
+    /** Whether tracking is currently active */
     get tracking(): boolean {
         return this.isActive;
     }
 
     /**
-     * ?곕뗄?????뽰삂??뺣뼄.
-     * ???뵬 ??????源?紐? ?怨?????쎈뻬 ??源?紐? 揶쏅Ŋ???뺣뼄.
+     * Starts tracking.
+     * Registers file-change watchers and terminal-execution listeners.
      */
     async start(issueKey: string): Promise<void> {
         if (this.isActive) {
             return;
         }
 
-        // Git ?꾩옱 HEAD瑜?湲곗??먯쑝濡????(?섑뼢??diff 怨꾩궛??
+        // Capture current Git HEAD as base reference (for computing diffs later)
         this.gitBaseRef = await this.getGitHead();
 
         await this.memory.startSession(issueKey, this.gitBaseRef ?? undefined);
 
-        // ???? L1: ???뵬 癰궰野??곕뗄??????
+        // ── L1: File change tracking ──
         const saveWatcher = vscode.workspace.onDidSaveTextDocument(
             async (doc) => {
                 await this.onFileSaved(doc);
@@ -51,7 +51,7 @@ export class Tracker {
         );
         this.disposables.push(saveWatcher);
 
-        // ???뵬 ??밴쉐/????揶쏅Ŋ??
+        // File creation/deletion tracking
         const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*');
         fileWatcher.onDidCreate(async (uri) => {
             await this.memory.addFileChange({
@@ -69,7 +69,7 @@ export class Tracker {
         });
         this.disposables.push(fileWatcher);
 
-        // ???? L2: ?怨???筌뤿굝議???곕뗄??????
+        // ── L2: Terminal command tracking ──
         const terminalWatcher = vscode.window.onDidStartTerminalShellExecution(
             async (e) => {
                 await this.onTerminalExecution(e);
@@ -83,7 +83,7 @@ export class Tracker {
     }
 
     /**
-     * ?곕뗄???餓λ쵐???뺣뼄. ??源???귐딅뮞??? 筌뤴뫀紐???곸젫??뺣뼄.
+     * Stops tracking. Disposes all watchers and resets state.
      */
     stop(): void {
         this.disposables.forEach(d => d.dispose());
@@ -92,22 +92,22 @@ export class Tracker {
         this.updateStatusBar();
     }
 
-    /** ?귐딅꺖????곸젫 */
+    /** Dispose all resources */
     dispose(): void {
         this.stop();
         this.statusBarItem.dispose();
     }
 
-    // ?????? L1: ???뵬 癰궰野?筌ｌ꼶????????
+    // ────── L1: File Change Handler ──────
 
     private async onFileSaved(doc: vscode.TextDocument): Promise<void> {
-        // node_modules, dist ???얜똻??
+        // Ignore node_modules, dist, etc.
         const relativePath = vscode.workspace.asRelativePath(doc.uri);
         if (this.shouldIgnorePath(relativePath)) {
             return;
         }
 
-        // Git diff ?④쑴沅?(揶쎛?館釉?野껋럩??
+        // Compute Git diff if available (for richer context)
         let diff: string | undefined;
         if (this.gitBaseRef) {
             diff = await this.getFileDiff(relativePath);
@@ -123,20 +123,20 @@ export class Tracker {
         await this.memory.addFileChange(entry);
     }
 
-    // ?????? L2: ?怨???筌뤿굝議??筌ｌ꼶????????
+    // ────── L2: Terminal Execution Handler ──────
 
     private async onTerminalExecution(
         e: vscode.TerminalShellExecutionStartEvent
     ): Promise<void> {
         const execution = e.execution;
 
-        // 筌뤿굝議????용뮞???곕뗄??
+        // Track command line
         const commandLine = execution.commandLine?.value ?? '';
         if (!commandLine) {
             return;
         }
 
-        // 筌뤿굝議????쎈뻬 ?袁⑥┷??疫꿸퀡???exitCode????륁춿
+        // Record the command with its working directory
         const cwd = execution.cwd
             ? vscode.workspace.asRelativePath(execution.cwd)
             : '';
@@ -147,7 +147,7 @@ export class Tracker {
             timestamp: new Date().toISOString(),
         };
 
-        // ?ル굝利???源?硫? 獄쏆뮇源??롢늺 exitCode ??낅쑓??꾨뱜
+        // Wait for command completion to capture exit code
         const endWatcher = vscode.window.onDidEndTerminalShellExecution(
             async (endEvent) => {
                 if (endEvent.execution === execution) {
@@ -158,7 +158,7 @@ export class Tracker {
             }
         );
 
-        // ???袁⑸툡?? 30???袁⑸퓠???ル굝利?????롢늺 域밸챶源?疫꿸퀡以?
+        // Timeout fallback: if command doesn't complete within 30s, record without exit code
         setTimeout(async () => {
             endWatcher.dispose();
             if (entry.exitCode === undefined) {
@@ -167,11 +167,11 @@ export class Tracker {
         }, 30000);
     }
 
-    // ?????? Git ?醫뤿뼢?귐뗫뼒 ??????
+    // ────── Git Utilities ──────
 
     /**
-     * ?袁⑹삺 Git HEAD???뚣끇而???곷뻻??揶쎛?紐꾩궔??
-     * Git???λ뜃由?遺얜┷筌왖 ??녿릭??겹늺 null??獄쏆꼹??
+     * Returns the current Git HEAD commit hash.
+     * Returns null if Git extension is unavailable.
      */
     private async getGitHead(): Promise<string | null> {
         try {
@@ -195,7 +195,7 @@ export class Tracker {
     }
 
     /**
-     * ?諭?????뵬??Git diff??揶쎛?紐꾩궔??(?곕뗄????뽰삂 ??뽰젎 ????.
+     * Returns the Git diff for a specific file against the base reference.
      */
     private async getFileDiff(relativePath: string): Promise<string | undefined> {
         try {
@@ -219,9 +219,9 @@ export class Tracker {
         }
     }
 
-    // ?????? ?醫뤿뼢?귐뗫뼒 ??????
+    // ────── Utilities ──────
 
-    /** ?얜똻???野껋럥以????쉘 */
+    /** Checks whether a file path should be ignored for tracking */
     private shouldIgnorePath(path: string): boolean {
         const ignorePatterns = [
             'node_modules',
@@ -233,7 +233,7 @@ export class Tracker {
         return ignorePatterns.some(p => path.includes(p));
     }
 
-    /** ?怨밴묶獄?UI ??낅쑓??꾨뱜 */
+    /** Updates status bar UI based on current tracking state */
     private updateStatusBar(): void {
         const session = this.memory.getSession();
         if (this.isActive && session) {
@@ -242,13 +242,13 @@ export class Tracker {
             const termCount = stats?.terminal ?? 0;
             this.statusBarItem.text = `$(record) ${session.issueKey} | $(file) ${fileCount} $(terminal) ${termCount}`;
             this.statusBarItem.tooltip =
-                `???뵬: ${fileCount} | ?怨??? ${termCount} | ???? ${stats?.chats ?? 0}\n?????뤿연 ?곕뗄??餓λ쵐?`;
+                `Files: ${fileCount} | Terminal: ${termCount} | Chat: ${stats?.chats ?? 0}\nClick to toggle tracking`;
             this.statusBarItem.backgroundColor = new vscode.ThemeColor(
                 'statusBarItem.warningBackground'
             );
         } else {
             this.statusBarItem.text = '$(circle-slash) Tracking: Off';
-            this.statusBarItem.tooltip = '?????뤿연 ?곕뗄????뽰삂';
+            this.statusBarItem.tooltip = 'Click to start tracking';
             this.statusBarItem.backgroundColor = undefined;
         }
     }
